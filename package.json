@@ -1,0 +1,27 @@
+{
+  "name": "td-web-cli",
+  "version": "0.1.0",
+  "description": "A CLI tool for efficiency",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "td-web-cli": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "format": "prettier --write \"src/**/*.{js,ts,tsx,json,md}\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@inquirer/prompts": "^8.2.0",
+    "commander": "^14.0.2"
+  },
+  "devDependencies": {
+    "@types/commander": "^2.12.0",
+    "@types/node": "^25.0.10",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3"
+  }
+}
