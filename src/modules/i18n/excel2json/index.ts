@@ -3,7 +3,7 @@ import { input } from '@inquirer/prompts';
 import XLSX from 'xlsx';
 import fs from 'fs';
 import path from 'path';
-import { getTimestamp } from '../../../utils/index.js';
+import { getTimestamp, logger, loggerError } from '../../../utils/index.js';
 
 type Row = (string | number | null | undefined)[];
 
@@ -95,9 +95,14 @@ export async function excel2json(program: Command) {
 
   // 加载配置文件
   try {
+    logger.info(`开始加载配置文件：${configPath}`);
     i18nConfig = loadConfig(configPath);
-  } catch {
-    console.error('读取配置文件失败，程序已退出');
+    logger.info('配置文件加载成功');
+  } catch (error: unknown) {
+    const msg = `读取配置文件失败：${
+      error instanceof Error ? error.message : String(error)
+    }，程序已退出`;
+    logger.error(msg);
     process.exit(1);
   }
 
@@ -121,12 +126,12 @@ export async function excel2json(program: Command) {
   );
 
   try {
-    console.log('正在读取excel文件...');
+    logger.info(`开始读取excel文件：${excelPath}`);
     // 读取excel文件
     const workbook = XLSX.readFile(excelPath);
     const firstSheetName = workbook.SheetNames[0];
     if (!firstSheetName) {
-      console.error('excel文件没有任何工作表，程序已退出');
+      logger.error('excel文件没有任何工作表，程序已退出');
       process.exit(1);
     }
 
@@ -135,11 +140,11 @@ export async function excel2json(program: Command) {
     const rows: Row[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
     if (rows.length < 2) {
-      console.error('工作表数据不足，至少需要两行（表头+数据），程序已退出');
+      logger.error('工作表数据不足，至少需要两行（表头+数据），程序已退出');
       process.exit(1);
     }
 
-    console.log('正在解析表头...');
+    logger.info('开始解析表头');
     // 处理表头行，去除空格，转成字符串
     const headerRow = rows[0].map((cell) => (cell ? String(cell).trim() : ''));
 
@@ -159,7 +164,7 @@ export async function excel2json(program: Command) {
     )?.[0];
 
     if (defaultColIndex === undefined) {
-      console.error(`找不到默认语言列：${defaultLang}，程序已退出`);
+      logger.error(`找不到默认语言列：${defaultLang}，程序已退出`);
       process.exit(1);
     }
     const defaultColNum = Number(defaultColIndex);
@@ -172,7 +177,7 @@ export async function excel2json(program: Command) {
       }
     });
 
-    console.log('正在解析数据行...');
+    logger.info('开始解析数据行');
     // 遍历数据行，提取默认语言词条作为key，其他语言对应的值作为翻译
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -204,7 +209,7 @@ export async function excel2json(program: Command) {
       fs.mkdirSync(outputRoot, { recursive: true });
     }
 
-    console.log('正在生成语言文件...');
+    logger.info(`开始生成语言文件，输出目录：${outputRoot}`);
     // 按语言生成对应的json文件
     for (const [langKey, translations] of Object.entries(langTranslations)) {
       if (Object.keys(translations).length === 0) continue;
@@ -220,13 +225,14 @@ export async function excel2json(program: Command) {
         JSON.stringify(translations, null, 2),
         'utf-8'
       );
-      console.log(`已生成：${filePath}`);
+      logger.info(`已生成语言文件：${filePath}`);
     }
 
-    console.log('全部转换完成！');
-  } catch {
-    // 生产环境不输出详细错误信息，避免泄露内部细节
-    console.error('转换失败，程序已退出');
+    logger.info('全部转换完成');
+    console.log('全部转换完成');
+  } catch (error: unknown) {
+    // 记录错误日志，方便排查
+    loggerError(error, logger);
     process.exit(1);
   }
 }

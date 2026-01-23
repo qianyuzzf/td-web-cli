@@ -159,9 +159,9 @@ export class Logger {
       // 仅在开发环境打印写日志异常堆栈，生产环境静默失败，避免影响主程序
       if (this.env === 'development') {
         if (error instanceof Error) {
-          console.error('日志写入异常:', error.stack);
+          console.error('日志写入异常：', error.stack);
         } else {
-          console.error('日志写入异常:', error);
+          console.error('日志写入异常：', error);
         }
       }
     }
@@ -198,3 +198,19 @@ export class Logger {
 export const logger = new Logger({
   env: process.env.NODE_ENV || 'development',
 });
+
+/**
+ * 通用错误日志记录函数
+ * @param error 捕获的错误对象
+ * @param logger 日志对象，需包含 error 方法
+ * @param prefix 日志前缀，方便区分来源，默认值为 '程序执行时发生错误'
+ */
+export function loggerError(
+  error: unknown,
+  logger: { error: (msg: string) => void },
+  prefix = '程序执行时发生错误'
+): void {
+  const message =
+    error instanceof Error ? (error.stack ?? error.message) : String(error);
+  logger.error(`${prefix}：${message}`);
+}
