@@ -1,3 +1,7 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 /**
  * 获取当前时间戳字符串，格式为：YYYYMMDDHHMMSS
  * 例如：20260123135500 表示 2026年01月23日 13点55分00秒
@@ -24,3 +28,173 @@ export function getTimestamp(): string {
   // 拼接成完整时间戳字符串
   return `${year}${month}${day}${hour}${minute}${second}`;
 }
+
+/**
+ * 日志级别类型
+ */
+type LogLevel = 'INFO' | 'WARN' | 'ERROR';
+
+/**
+ * 日志配置接口
+ */
+interface LoggerOptions {
+  /**
+   * 日志目录，默认程序上级目录下的 logs 文件夹
+   */
+  logsDir?: string;
+
+  /**
+   * 日志文件名格式函数，接收当前日期，返回文件名字符串
+   * 默认格式为 YYYYMMDD.txt
+   */
+  filenameFormatter?: (date: Date) => string;
+
+  /**
+   * 当前环境，默认 process.env.NODE_ENV
+   */
+  env?: string;
+
+  /**
+   * 程序入口文件绝对路径，用于确定日志目录位置
+   */
+  entryFilePath?: string;
+}
+
+/**
+ * 获取程序入口文件路径（兼容 ES Module）
+ */
+function getEntryFilePath(): string {
+  try {
+    // 当前模块文件路径
+    return fileURLToPath(import.meta.url);
+  } catch {
+    // 兜底：使用 process.argv[1]
+    if (process.argv.length > 1) {
+      return path.resolve(process.cwd(), process.argv[1]);
+    }
+    // 最终兜底
+    return '';
+  }
+}
+
+/**
+ * 默认日志配置
+ * logsDir 默认设置为程序入口文件所在目录的上级目录的 logs 文件夹
+ */
+const defaultOptions: LoggerOptions = {
+  logsDir: '',
+  filenameFormatter: (date: Date) =>
+    date.toISOString().slice(0, 10).replace(/-/g, '') + '.txt',
+  env: process.env.NODE_ENV || 'production',
+  entryFilePath: getEntryFilePath(),
+};
+
+/**
+ * 格式化日志内容，支持字符串或对象
+ * @param level 日志级别
+ * @param message 日志内容，字符串或对象
+ * @param date 当前时间
+ * @returns 格式化后的日志字符串
+ */
+function formatLogLine(level: LogLevel, message: unknown, date: Date): string {
+  const timeStr = date.toISOString();
+  let msgStr: string;
+  if (typeof message === 'string') {
+    msgStr = message;
+  } else {
+    try {
+      msgStr = JSON.stringify(message, null, 2);
+    } catch {
+      msgStr = String(message);
+    }
+  }
+  return `[${timeStr}] [${level}] ${msgStr}\n`;
+}
+
+/**
+ * 统一日志处理类
+ * 只写入日志文件，不打印控制台
+ */
+export class Logger {
+  private logsDir: string;
+  private filenameFormatter: (date: Date) => string;
+  private env: string;
+
+  /**
+   * 构造函数，初始化日志配置
+   * @param options 配置项，可选
+   */
+  constructor(options?: LoggerOptions) {
+    const opts = { ...defaultOptions, ...options };
+
+    // 如果未传 logsDir，则默认设置为入口文件所在目录的上级目录的 logs 文件夹
+    this.logsDir =
+      opts.logsDir ||
+      path.resolve(path.dirname(opts.entryFilePath!), '..', 'logs');
+    this.filenameFormatter =
+      opts.filenameFormatter ?? defaultOptions.filenameFormatter!;
+    this.env = opts.env ?? defaultOptions.env!;
+  }
+
+  /**
+   * 写日志主函数，只写入日志文件，不打印控制台
+   * @param level 日志级别
+   * @param message 日志内容，支持字符串或对象
+   */
+  log(level: LogLevel, message: unknown): void {
+    try {
+      // 确保日志目录存在
+      if (!fs.existsSync(this.logsDir)) {
+        fs.mkdirSync(this.logsDir, { recursive: true });
+      }
+
+      const now = new Date();
+      const filename = this.filenameFormatter(now);
+      const logFilePath = path.join(this.logsDir, filename);
+      const logLine = formatLogLine(level, message, now);
+
+      // 追加写入日志文件
+      fs.appendFileSync(logFilePath, logLine, { encoding: 'utf8' });
+    } catch (error: unknown) {
+      // 仅在开发环境打印写日志异常堆栈，生产环境静默失败，避免影响主程序
+      if (this.env === 'development') {
+        if (error instanceof Error) {
+          console.error('日志写入异常:', error.stack);
+        } else {
+          console.error('日志写入异常:', error);
+        }
+      }
+    }
+  }
+
+  /**
+   * 记录信息级别日志
+   * @param message 日志内容
+   */
+  info(message: unknown): void {
+    this.log('INFO', message);
+  }
+
+  /**
+   * 记录警告级别日志
+   * @param message 日志内容
+   */
+  warn(message: unknown): void {
+    this.log('WARN', message);
+  }
+
+  /**
+   * 记录错误级别日志
+   * @param message 日志内容
+   */
+  error(message: unknown): void {
+    this.log('ERROR', message);
+  }
+}
+
+/**
+ * 默认导出单例 logger，方便直接使用
+ */
+export const logger = new Logger({
+  env: process.env.NODE_ENV || 'development',
+});

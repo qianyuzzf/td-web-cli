@@ -8,13 +8,21 @@
 import { Command } from 'commander';
 import { select, Separator } from '@inquirer/prompts';
 import { i18n } from './modules/i18n/index.js';
+import { logger } from './utils/index.js';
 
 const program = new Command();
 
+/**
+ * 主程序入口函数
+ * 解析命令行参数，交互式选择模块并执行
+ */
 async function main() {
   try {
+    logger.info('CLI程序启动');
+
     // 解析命令行参数
     program.parse(process.argv);
+    logger.info(`命令行参数解析完成: ${process.argv.slice(2).join(' ')}`);
 
     // 交互式选择模块
     const answer = await select({
@@ -32,18 +40,26 @@ async function main() {
       loop: true, // 选项循环滚动
     });
 
+    logger.info(`用户选择模块: ${answer}`);
+
     // 根据选择执行对应模块
     switch (answer) {
       case 'i18n':
+        logger.info('开始执行国际化模块');
         await i18n(program);
+        logger.info('国际化模块执行完成');
         break;
       default:
-        console.log('未选择任何模块，程序已退出');
+        logger.warn('未选择任何模块，程序已退出');
         process.exit(0);
     }
-  } catch {
-    // 生产环境不打印详细错误信息，避免泄露内部细节
-    console.error('程序执行出错，程序已退出');
+  } catch (error: unknown) {
+    // 记录错误日志，方便排查
+    if (error instanceof Error) {
+      logger.error(`程序执行出错: ${error.stack ?? error.message}`);
+    } else {
+      logger.error(`程序执行出错，未知错误: ${String(error)}`);
+    }
     process.exit(1);
   }
 }
