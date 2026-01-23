@@ -18,7 +18,7 @@ const program = new Command();
  */
 async function main() {
   try {
-    logger.info('【td-web-cli】程序启动');
+    logger.info('td-web-cli程序启动');
 
     // 解析命令行参数
     program.parse(process.argv);
@@ -58,12 +58,12 @@ async function main() {
     // 根据选择执行对应模块
     switch (answer) {
       case 'i18n':
-        logger.info(`【${selectedModule.name}】模块开始执行`);
+        logger.info(`${selectedModule.name}模块开始执行`);
         await i18n(program);
-        logger.info(`【${selectedModule.name}】模块执行完成`);
+        logger.info(`${selectedModule.name}模块执行完成`);
         break;
       default:
-        logger.warn(`【${selectedModule.name}】模块暂未实现，程序已退出`);
+        logger.warn(`${selectedModule.name}模块暂未实现，程序已退出`);
         process.exit(0);
     }
   } catch (error: unknown) {

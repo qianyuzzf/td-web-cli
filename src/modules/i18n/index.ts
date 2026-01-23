@@ -10,7 +10,7 @@ import { logger, loggerError } from '../../utils/index.js';
  */
 export async function i18n(program: Command) {
   try {
-    logger.info('【国际化】模块启动，等待用户选择功能');
+    logger.info('国际化模块启动，等待用户选择功能');
 
     // 定义可用功能选项
     const moduleChoices = [
@@ -61,12 +61,12 @@ export async function i18n(program: Command) {
     // 根据选择执行对应功能
     switch (answer) {
       case 'excel2json':
-        logger.info(`【${selectedModule.name}】功能开始执行`);
+        logger.info(`${selectedModule.name}功能开始执行`);
         await excel2json(program);
-        logger.info(`【${selectedModule.name}】功能执行完成`);
+        logger.info(`${selectedModule.name}功能执行完成`);
         break;
       default:
-        logger.warn(`【${selectedModule.name}】功能暂未实现，程序已退出`);
+        logger.warn(`${selectedModule.name}功能暂未实现，程序已退出`);
         process.exit(0);
     }
   } catch (error: unknown) {
