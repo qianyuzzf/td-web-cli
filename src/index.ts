@@ -22,7 +22,7 @@ async function main() {
 
     // 解析命令行参数
     program.parse(process.argv);
-    logger.info(`命令行参数解析完成: ${process.argv.slice(2).join(' ')}`);
+    logger.info(`命令行参数解析完成：${process.argv.slice(2).join(' ')}`);
 
     // 交互式选择模块
     const answer = await select({
@@ -40,7 +40,7 @@ async function main() {
       loop: true, // 选项循环滚动
     });
 
-    logger.info(`用户选择模块: ${answer}`);
+    logger.info(`用户选择模块：${answer}`);
 
     // 根据选择执行对应模块
     switch (answer) {
@@ -56,9 +56,9 @@ async function main() {
   } catch (error: unknown) {
     // 记录错误日志，方便排查
     if (error instanceof Error) {
-      logger.error(`程序执行出错: ${error.stack ?? error.message}`);
+      logger.error(`程序执行时发生错误：${error.stack ?? error.message}`);
     } else {
-      logger.error(`程序执行出错，未知错误: ${String(error)}`);
+      logger.error(`程序执行时发生未知错误：${String(error)}`);
     }
     process.exit(1);
   }

@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { select, Separator } from '@inquirer/prompts';
 import { excel2json } from './excel2json/index.js';
+import { logger } from '../../utils/index.js';
 
 /**
  * 国际化模块主入口
@@ -9,6 +10,8 @@ import { excel2json } from './excel2json/index.js';
  */
 export async function i18n(program: Command) {
   try {
+    logger.info('国际化模块启动，等待用户选择功能');
+
     // 交互式选择需要执行的功能
     const answer = await select({
       message: '请选择要执行的功能：',
@@ -40,19 +43,27 @@ export async function i18n(program: Command) {
       loop: true, // 是否循环滚动选项
     });
 
+    logger.info(`用户选择功能：${answer}`);
+
     // 根据选择执行对应功能
     switch (answer) {
       case 'excel2json':
+        logger.info('开始执行 excel2json 功能');
         await excel2json(program);
+        logger.info('excel2json 功能执行完毕');
         break;
       default:
-        // 其他功能暂未实现，提示并退出
-        console.log(`功能【${answer}】暂未实现或未选择，程序已退出`);
+        logger.warn(`功能【${answer}】暂未实现或未选择，程序已退出`);
         process.exit(0);
     }
-  } catch {
-    // 生产环境不打印详细错误信息，避免泄露内部细节
-    console.error('执行国际化模块时发生错误，程序已退出');
+  } catch (error: unknown) {
+    // 捕获并记录错误日志，方便排查问题
+    if (error instanceof Error) {
+      logger.error(`执行国际化模块时发生错误: ${error.stack ?? error.message}`);
+    } else {
+      logger.error(`执行国际化模块时发生未知错误: ${String(error)}`);
+    }
+
     process.exit(1);
   }
 }
