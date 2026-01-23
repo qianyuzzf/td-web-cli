@@ -113,7 +113,7 @@ function formatLogLine(level: LogLevel, message: unknown, date: Date): string {
 
 /**
  * 统一日志处理类
- * 只写入日志文件，不打印控制台
+ * 支持写入日志文件和单次调用时控制是否打印控制台
  */
 export class Logger {
   private logsDir: string;
@@ -137,21 +137,38 @@ export class Logger {
   }
 
   /**
-   * 写日志主函数，只写入日志文件，不打印控制台
+   * 写日志主函数
    * @param level 日志级别
    * @param message 日志内容，支持字符串或对象
+   * @param printConsole 是否打印到控制台，默认 false
    */
-  log(level: LogLevel, message: unknown): void {
+  log(level: LogLevel, message: unknown, printConsole = false): void {
+    const now = new Date();
+    const logLine = formatLogLine(level, message, now);
+
+    // 根据调用时是否指定打印控制台，决定是否打印
+    if (printConsole) {
+      switch (level) {
+        case 'INFO':
+          console.info(logLine.trim());
+          break;
+        case 'WARN':
+          console.warn(logLine.trim());
+          break;
+        case 'ERROR':
+          console.error(logLine.trim());
+          break;
+      }
+    }
+
     try {
       // 确保日志目录存在
       if (!fs.existsSync(this.logsDir)) {
         fs.mkdirSync(this.logsDir, { recursive: true });
       }
 
-      const now = new Date();
       const filename = this.filenameFormatter(now);
       const logFilePath = path.join(this.logsDir, filename);
-      const logLine = formatLogLine(level, message, now);
 
       // 追加写入日志文件
       fs.appendFileSync(logFilePath, logLine, { encoding: 'utf8' });
@@ -170,30 +187,34 @@ export class Logger {
   /**
    * 记录信息级别日志
    * @param message 日志内容
+   * @param printConsole 是否打印到控制台，默认 false
    */
-  info(message: unknown): void {
-    this.log('INFO', message);
+  info(message: unknown, printConsole = false): void {
+    this.log('INFO', message, printConsole);
   }
 
   /**
    * 记录警告级别日志
    * @param message 日志内容
+   * @param printConsole 是否打印到控制台，默认 false
    */
-  warn(message: unknown): void {
-    this.log('WARN', message);
+  warn(message: unknown, printConsole = false): void {
+    this.log('WARN', message, printConsole);
   }
 
   /**
    * 记录错误级别日志
    * @param message 日志内容
+   * @param printConsole 是否打印到控制台，默认 false
    */
-  error(message: unknown): void {
-    this.log('ERROR', message);
+  error(message: unknown, printConsole = false): void {
+    this.log('ERROR', message, printConsole);
   }
 }
 
 /**
  * 默认导出单例 logger，方便直接使用
+ * 默认不打印控制台日志
  */
 export const logger = new Logger({
   env: process.env.NODE_ENV || 'development',
@@ -204,13 +225,15 @@ export const logger = new Logger({
  * @param error 捕获的错误对象
  * @param logger 日志对象，需包含 error 方法
  * @param prefix 日志前缀，方便区分来源，默认值为 '程序执行时发生错误'
+ * @param printConsole 是否打印错误日志到控制台，默认 false
  */
 export function loggerError(
   error: unknown,
-  logger: { error: (msg: string) => void },
-  prefix = '程序执行时发生错误'
+  logger: { error: (msg: string, printConsole?: boolean) => void },
+  prefix = '程序执行时发生错误',
+  printConsole = false
 ): void {
   const message =
     error instanceof Error ? (error.stack ?? error.message) : String(error);
-  logger.error(`${prefix}：${message}`);
+  logger.error(`${prefix}：${message}`, printConsole);
 }

@@ -228,8 +228,7 @@ export async function excel2json(program: Command) {
       logger.info(`已生成语言文件：${filePath}`);
     }
 
-    logger.info('全部转换完成');
-    console.log('全部转换完成');
+    logger.info('全部转换完成', true);
   } catch (error: unknown) {
     // 记录错误日志，方便排查
     loggerError(error, logger);
