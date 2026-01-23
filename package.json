@@ -16,7 +16,8 @@
   "license": "ISC",
   "dependencies": {
     "@inquirer/prompts": "^8.2.0",
-    "commander": "^14.0.2"
+    "commander": "^14.0.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/commander": "^2.12.0",
