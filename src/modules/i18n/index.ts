@@ -72,6 +72,7 @@ export async function i18n(program: Command) {
   } catch (error: unknown) {
     // 记录错误日志，方便排查
     loggerError(error, logger);
+    console.error('程序执行时发生异常，已记录日志，程序已退出');
     process.exit(1);
   }
 }

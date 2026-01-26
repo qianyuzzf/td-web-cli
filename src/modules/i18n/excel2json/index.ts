@@ -101,6 +101,7 @@ export async function excel2json(program: Command) {
   } catch (error: unknown) {
     const msg = `读取配置文件失败：${error instanceof Error ? error.message : String(error)}，程序已退出`;
     logger.error(msg);
+    console.error('程序执行时发生异常，已记录日志，程序已退出');
     process.exit(1);
   }
 
@@ -131,6 +132,7 @@ export async function excel2json(program: Command) {
     const firstSheetName = workbook.SheetNames[0];
     if (!firstSheetName) {
       logger.error('excel文件没有任何工作表，程序已退出');
+      console.error('程序执行时发生异常，已记录日志，程序已退出');
       process.exit(1);
     }
 
@@ -140,6 +142,7 @@ export async function excel2json(program: Command) {
 
     if (rows.length < 2) {
       logger.error('工作表数据不足，至少需要两行（表头+数据），程序已退出');
+      console.error('程序执行时发生异常，已记录日志，程序已退出');
       process.exit(1);
     }
 
@@ -164,6 +167,7 @@ export async function excel2json(program: Command) {
 
     if (defaultColIndex === undefined) {
       logger.error(`找不到默认语言列：${defaultLang}，程序已退出`);
+      console.error('程序执行时发生异常，已记录日志，程序已退出');
       process.exit(1);
     }
     const defaultColNum = Number(defaultColIndex);
@@ -232,6 +236,7 @@ export async function excel2json(program: Command) {
   } catch (error: unknown) {
     // 记录错误日志，方便排查
     loggerError(error, logger);
+    console.error('程序执行时发生异常，已记录日志，程序已退出');
     process.exit(1);
   }
 }
