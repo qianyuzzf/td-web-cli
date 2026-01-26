@@ -299,7 +299,7 @@ export async function excel2json(program: Command) {
       }
     }
 
-    // 对所有语言词条批量进行语言检测
+    // 对所有语言词条批量进行语言检测（包括默认语言）
     for (const [langKey, texts] of Object.entries(langKeysMap)) {
       const longCode = i18nConfig.longCodes[langKey];
       if (!longCode) {
@@ -331,7 +331,7 @@ export async function excel2json(program: Command) {
         );
         for (const match of result.matches) {
           logger.info(
-            `- 错误: ${match.message}，建议替换: ${match.replacements
+            `- 错误: ${match.message}\n  出错句子: ${match.sentence}\n  建议替换: ${match.replacements
               .map((r) => r.value)
               .join(', ')}`
           );
@@ -349,9 +349,14 @@ export async function excel2json(program: Command) {
 
     logger.info(`开始生成语言文件，输出目录：${outputRoot}`);
 
-    // 按语言生成对应的json文件
+    // 按语言生成对应的json文件，默认语言的key=value不生成文件
     for (const [langKey, translations] of Object.entries(langTranslations)) {
       if (Object.keys(translations).length === 0) continue;
+
+      if (langKey === defaultLang) {
+        logger.info(`跳过默认语言(${langKey})的json文件生成`);
+        continue; // 跳过默认语言文件生成
+      }
 
       const langDir = path.join(outputRoot, langKey);
       if (!fs.existsSync(langDir)) {
