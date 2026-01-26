@@ -3,7 +3,12 @@ import { input } from '@inquirer/prompts';
 import XLSX from 'xlsx';
 import fs from 'fs';
 import path from 'path';
-import { getTimestamp, logger, loggerError } from '../../../utils/index.js';
+import {
+  getTimestamp,
+  logger,
+  loggerError,
+  normalizeError,
+} from '../../../utils/index.js';
 
 type Row = (string | number | null | undefined)[];
 
@@ -99,7 +104,7 @@ export async function excel2json(program: Command) {
     i18nConfig = loadConfig(configPath);
     logger.info('配置文件加载成功');
   } catch (error: unknown) {
-    const msg = `读取配置文件失败：${error instanceof Error ? error.message : String(error)}，程序已退出`;
+    const msg = `读取配置文件失败：${normalizeError(error).stack}，程序已退出`;
     logger.error(msg);
     console.error('程序执行时发生异常，已记录日志，程序已退出');
     process.exit(1);

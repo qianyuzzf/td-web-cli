@@ -178,11 +178,7 @@ export class Logger {
     } catch (error: unknown) {
       // 仅在开发环境打印写日志异常堆栈，生产环境静默失败，避免影响主程序
       if (this.env === 'development') {
-        if (error instanceof Error) {
-          console.error('日志写入异常：', error.stack);
-        } else {
-          console.error('日志写入异常：', error);
-        }
+        console.error('日志写入异常：', normalizeError(error).stack);
       }
     }
   }
@@ -236,7 +232,23 @@ export function loggerError(
   prefix = '程序执行时发生错误',
   printConsole = false
 ): void {
-  const message =
-    error instanceof Error ? (error.stack ?? error.message) : String(error);
-  logger.error(`${prefix}：${message}`, printConsole);
+  logger.error(`${prefix}：${normalizeError(error).stack}`, printConsole);
 }
+
+/**
+ * 将任意错误对象规范化为 Error 类型。
+ * @param err - 可能是 Error、字符串或其他任意类型
+ * @returns 标准的 Error 对象
+ */
+export const normalizeError = (err: unknown): Error => {
+  if (err instanceof Error) {
+    // 已经是 Error 类型，直接返回
+    return err;
+  } else if (typeof err === 'string') {
+    // 如果是字符串，创建新的 Error
+    return new Error(err);
+  } else {
+    // 其他情况，返回通用错误
+    return new Error('未知错误');
+  }
+};
