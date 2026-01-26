@@ -21,6 +21,27 @@
       "laes": ["拉美西语"],
       "pt": ["欧洲葡语"],
       "nl": ["荷兰语"]
+    },
+    "longCodes": {
+      "cn": "zh-CN",
+      "zh": "zh-TW",
+      "en": "en-US",
+      "it": "it-IT",
+      "brpt": "pt-BR",
+      "uk": "uk-UA",
+      "ru": "ru-RU",
+      "es": "es-ES",
+      "hu": "hu-HU",
+      "pl": "pl-PL",
+      "tr": "tr-TR",
+      "de": "de-DE",
+      "fr": "fr-FR",
+      "ro": "ro-RO",
+      "ko": "ko-KR",
+      "cs": "cs-CZ",
+      "laes": "es-MX",
+      "pt": "pt-PT",
+      "nl": "nl-NL"
     }
   }
 }

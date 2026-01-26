@@ -16,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "@inquirer/prompts": "^8.2.0",
+    "axios": "^1.13.3",
     "commander": "^14.0.2",
     "xlsx": "^0.18.5"
   },

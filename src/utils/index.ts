@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getData, postData } from '../api/index.js';
+import api from '../api/interface.js';
 
 /**
  * 获取当前时间戳字符串，格式为：YYYYMMDDHHMMSS
@@ -252,3 +254,99 @@ export const normalizeError = (err: unknown): Error => {
     return new Error('未知错误');
   }
 };
+
+/**
+ * 语言工具接口返回的语言列表类型
+ * 数组中每个元素包含语言名称、简写代码和长代码
+ */
+export type LanguageTool = {
+  name: string; // 语言名称，如 "English"
+  code: string; // 语言简写代码，如 "en"
+  longCode: string; // 语言长代码，如 "en-US"
+}[];
+
+/**
+ * 获取支持的语言列表
+ * 调用语言工具接口，返回所有支持的语言信息数组
+ * @returns Promise<LanguageTool> 返回语言列表的 Promise
+ * @throws 接口请求失败时抛出错误，错误信息包含接口地址和异常堆栈
+ */
+export async function getLanguageTool(): Promise<LanguageTool> {
+  const url = api.LANGUAGE_TOOL_V2_LANGUAGES;
+  try {
+    const res = await getData<LanguageTool>(url);
+    return res;
+  } catch (error) {
+    // 捕获异常并包装错误信息，包含接口地址和堆栈信息
+    throw new Error(`${url}接口报错：${normalizeError(error).stack}`);
+  }
+}
+
+/**
+ * 替换建议类型
+ */
+export interface Replacement {
+  value: string; // 建议替换的字符串
+}
+
+/**
+ * 语言检测结果中的单条匹配错误信息
+ */
+export interface Match {
+  message: string; // 错误描述信息
+  shortMessage: string; // 简短错误信息
+  offset: number; // 错误在文本中的起始位置
+  length: number; // 错误长度
+  replacements: Replacement[]; // 建议的替换项数组
+  sentence: string; // 出错的句子
+  rule: {
+    // 触发的规则信息
+    id: string; // 规则ID
+    description: string; // 规则描述
+  };
+}
+
+/**
+ * 语言检测接口返回的完整结果类型
+ */
+export interface CheckResult {
+  matches: Match[]; // 检测到的所有错误匹配项
+  language: {
+    // 语言信息
+    name: string; // 语言名称
+    code: string; // 语言代码
+  };
+  software: {
+    // 使用的检测软件信息
+    name: string; // 软件名称
+    version: string; // 版本号
+    premium: boolean; // 是否为付费版
+  };
+}
+
+/**
+ * 调用语言检测接口，检测文本中的语言错误
+ * @param text 待检测文本
+ * @param language 语言代码，默认 'en-US'
+ * @returns Promise<CheckResult> 返回检测结果的 Promise
+ * @throws 接口请求失败时抛出错误，错误信息包含接口地址和异常堆栈
+ */
+export async function languageToolCheck(
+  text: string,
+  language = 'en-US'
+): Promise<CheckResult> {
+  const url = api.LANGUAGE_TOOL_V2_CHECK;
+  const params = new URLSearchParams();
+  params.append('text', text);
+  params.append('language', language);
+
+  try {
+    const res = await postData<string, CheckResult>(url, params.toString(), {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    });
+    return res;
+  } catch (error) {
+    // 捕获异常并包装错误信息，包含接口地址和堆栈信息
+    throw new Error(`${url}接口报错：${normalizeError(error).stack}`);
+  }
+}

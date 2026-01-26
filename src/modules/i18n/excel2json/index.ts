@@ -8,6 +8,9 @@ import {
   logger,
   loggerError,
   normalizeError,
+  CheckResult,
+  languageToolCheck,
+  getLanguageTool,
 } from '../../../utils/index.js';
 
 type Row = (string | number | null | undefined)[];
@@ -16,10 +19,12 @@ type Row = (string | number | null | undefined)[];
  * 国际化配置类型定义
  * defaultKey: 默认语言key
  * langs: 语言映射，key为语言标识，value为语言名称数组（支持多名称匹配）
+ * longCodes: 语言长代码映射，key为语言标识，value为语言长代码
  */
 interface I18nConfig {
   defaultKey: string;
   langs: Record<string, string[]>;
+  longCodes: Record<string, string>;
 }
 
 /**
@@ -32,10 +37,19 @@ function loadConfig(configPath: string): I18nConfig {
   if (!fs.existsSync(configPath)) {
     throw new Error(`配置文件不存在：${configPath}`);
   }
-  const content = fs.readFileSync(configPath, 'utf-8');
+  const content = fs.readFileSync(configPath, { encoding: 'utf-8' });
   const json = JSON.parse(content);
-  if (!json.i18n || !json.i18n.defaultKey || !json.i18n.langs) {
-    throw new Error('配置文件格式错误，缺少i18n.defaultKey或i18n.langs');
+  if (!json.i18n) {
+    throw new Error('配置文件格式错误，缺少i18n');
+  }
+  if (!json.i18n.defaultKey) {
+    throw new Error('配置文件格式错误，缺少i18n.defaultKey');
+  }
+  if (!json.i18n.langs) {
+    throw new Error('配置文件格式错误，缺少i18n.langs');
+  }
+  if (!json.i18n.longCodes) {
+    throw new Error('配置文件格式错误，缺少i18n.longCodes');
   }
   return json.i18n;
 }
@@ -89,8 +103,37 @@ function trimQuotes(str: string): string {
 }
 
 /**
+ * 批量检测词条文本，返回所有检测结果
+ * @param texts 词条数组
+ * @param language 语言代码
+ * @returns 检测结果数组，顺序对应输入texts
+ *
+ * 说明：
+ * 这里将所有词条用换行符拼接成一个字符串，一次性调用语言检测接口，
+ * 以减少请求次数和提升性能。
+ * 返回结果数组中只包含一个元素，即合并检测的结果。
+ */
+async function batchCheckTexts(
+  texts: string[],
+  language: string
+): Promise<(CheckResult | null)[]> {
+  const results: (CheckResult | null)[] = [];
+  try {
+    // 将词条用换行符拼接，避免词条间干扰，推荐换行分隔
+    const joinedText = texts.join('\n');
+    const res = await languageToolCheck(joinedText, language);
+    results.push(res);
+  } catch (error) {
+    loggerError(error, logger);
+    results.push(null);
+  }
+  return results;
+}
+
+/**
  * excel转json功能主函数
  * 读取用户输入的excel路径，解析内容，根据配置生成多语言json文件
+ * 并对配置文件中所有语言对应的词条进行语言检测
  * @param program Commander命令行实例
  */
 export async function excel2json(program: Command) {
@@ -108,6 +151,43 @@ export async function excel2json(program: Command) {
     logger.error(msg);
     console.error('程序执行时发生异常，已记录日志，程序已退出');
     process.exit(1);
+  }
+
+  // 尝试调用接口获取支持的语言列表，更新 longCodes
+  try {
+    logger.info('尝试获取在线支持的语言列表...');
+    const languageTools = await getLanguageTool();
+    logger.info(`成功获取语言列表，覆盖配置文件中的 longCodes`);
+
+    // 构建新的 longCodes 映射
+    const newLongCodes: Record<string, string> = {};
+    // 语言标识对应语言名称列表，方便匹配
+    const langNameToKey: Record<string, string> = {};
+    for (const [key, names] of Object.entries(i18nConfig.langs)) {
+      names.forEach((name) => {
+        langNameToKey[name.toLowerCase()] = key;
+      });
+    }
+
+    for (const lang of languageTools) {
+      // 尝试根据语言名称匹配配置中的语言key
+      const lowerName = lang.name.toLowerCase();
+      const matchedKey =
+        langNameToKey[lowerName] ||
+        Object.keys(i18nConfig.langs).find(
+          (k) => k.toLowerCase() === lowerName
+        );
+      if (matchedKey) {
+        newLongCodes[matchedKey] = lang.longCode;
+      }
+    }
+
+    // 替换旧的 longCodes，保留未匹配的旧值
+    i18nConfig.longCodes = { ...i18nConfig.longCodes, ...newLongCodes };
+  } catch (error) {
+    logger.warn(
+      `获取在线语言列表失败，使用本地配置 longCodes，错误：${normalizeError(error).stack}`
+    );
   }
 
   // 交互式输入excel文件路径并校验
@@ -177,16 +257,20 @@ export async function excel2json(program: Command) {
     }
     const defaultColNum = Number(defaultColIndex);
 
-    // 初始化除默认语言外的语言词条对象
+    // 初始化所有语言词条对象（包括默认语言）
     const langTranslations: Record<string, Record<string, string>> = {};
     Object.values(colIndexToLangKey).forEach((langKey) => {
-      if (langKey !== defaultLang) {
-        langTranslations[langKey] = {};
-      }
+      langTranslations[langKey] = {};
     });
 
     logger.info('开始解析数据行');
-    // 遍历数据行，提取默认语言词条作为key，其他语言对应的值作为翻译
+    // 遍历数据行，提取所有语言词条
+    // key统一用默认语言列的值，其他语言对应的列为翻译内容
+    const langKeysMap: Record<string, string[]> = {}; // 语言key => 词条数组
+    Object.keys(langTranslations).forEach((langKey) => {
+      langKeysMap[langKey] = [];
+    });
+
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       const keyCell = row[defaultColNum];
@@ -198,13 +282,59 @@ export async function excel2json(program: Command) {
       // 跳过空key，避免写入无效数据
       if (key.length === 0) continue;
 
-      // 遍历语言列，除默认语言外，填充翻译内容
+      // 默认语言的词条即key本身
+      langTranslations[defaultLang][key] = key;
+      langKeysMap[defaultLang].push(key);
+
+      // 其他语言词条
       for (const [colIdxStr, langKey] of Object.entries(colIndexToLangKey)) {
         const colIdx = Number(colIdxStr);
         if (langKey === defaultLang) continue;
         const valCell = row[colIdx];
         if (valCell !== undefined && valCell !== null && valCell !== '') {
-          langTranslations[langKey][key] = String(valCell);
+          const valStr = String(valCell);
+          langTranslations[langKey][key] = valStr;
+          langKeysMap[langKey].push(valStr);
+        }
+      }
+    }
+
+    // 对所有语言词条批量进行语言检测
+    for (const [langKey, texts] of Object.entries(langKeysMap)) {
+      const longCode = i18nConfig.longCodes[langKey];
+      if (!longCode) {
+        logger.warn(`语言(${langKey})未配置 longCode，跳过检测`);
+        continue;
+      }
+      if (texts.length === 0) {
+        logger.info(`语言(${langKey})无词条，跳过检测`);
+        continue;
+      }
+
+      logger.info(
+        `开始对语言(${langKey})词条进行语言检测，词条数量：${texts.length}`
+      );
+
+      const checkResults = await batchCheckTexts(texts, longCode);
+
+      if (!checkResults || checkResults.length === 0 || !checkResults[0]) {
+        logger.error(`语言(${langKey})词条检测失败`);
+        continue;
+      }
+
+      const result = checkResults[0];
+      if (result.matches.length === 0) {
+        logger.info(`语言(${langKey})词条检测无错误`);
+      } else {
+        logger.info(
+          `语言(${langKey})词条检测发现问题，词条数量: ${result.matches.length}`
+        );
+        for (const match of result.matches) {
+          logger.info(
+            `- 错误: ${match.message}，建议替换: ${match.replacements
+              .map((r) => r.value)
+              .join(', ')}`
+          );
         }
       }
     }
@@ -229,11 +359,9 @@ export async function excel2json(program: Command) {
       }
 
       const filePath = path.join(langDir, 'translate.json');
-      fs.writeFileSync(
-        filePath,
-        JSON.stringify(translations, null, 2),
-        'utf-8'
-      );
+      fs.writeFileSync(filePath, JSON.stringify(translations, null, 2), {
+        encoding: 'utf-8',
+      });
       logger.info(`已生成语言文件：${filePath}`);
     }
 
