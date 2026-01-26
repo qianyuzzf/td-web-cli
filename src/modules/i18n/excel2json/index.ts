@@ -99,9 +99,7 @@ export async function excel2json(program: Command) {
     i18nConfig = loadConfig(configPath);
     logger.info('配置文件加载成功');
   } catch (error: unknown) {
-    const msg = `读取配置文件失败：${
-      error instanceof Error ? error.message : String(error)
-    }，程序已退出`;
+    const msg = `读取配置文件失败：${error instanceof Error ? error.message : String(error)}，程序已退出`;
     logger.error(msg);
     process.exit(1);
   }
@@ -127,6 +125,7 @@ export async function excel2json(program: Command) {
 
   try {
     logger.info(`开始读取excel文件：${excelPath}`);
+
     // 读取excel文件
     const workbook = XLSX.readFile(excelPath);
     const firstSheetName = workbook.SheetNames[0];
@@ -210,6 +209,7 @@ export async function excel2json(program: Command) {
     }
 
     logger.info(`开始生成语言文件，输出目录：${outputRoot}`);
+
     // 按语言生成对应的json文件
     for (const [langKey, translations] of Object.entries(langTranslations)) {
       if (Object.keys(translations).length === 0) continue;

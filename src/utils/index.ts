@@ -39,7 +39,7 @@ type LogLevel = 'INFO' | 'WARN' | 'ERROR';
  */
 interface LoggerOptions {
   /**
-   * 日志目录，默认程序上级目录下的 logs 文件夹
+   * 日志目录，默认程序入口文件所在目录的上级目录的 logs 文件夹
    */
   logsDir?: string;
 
@@ -62,6 +62,7 @@ interface LoggerOptions {
 
 /**
  * 获取程序入口文件路径（兼容 ES Module）
+ * @returns 程序入口文件的绝对路径
  */
 function getEntryFilePath(): string {
   try {
@@ -99,6 +100,7 @@ const defaultOptions: LoggerOptions = {
 function formatLogLine(level: LogLevel, message: unknown, date: Date): string {
   const timeStr = date.toISOString();
   let msgStr: string;
+
   if (typeof message === 'string') {
     msgStr = message;
   } else {
@@ -108,12 +110,13 @@ function formatLogLine(level: LogLevel, message: unknown, date: Date): string {
       msgStr = String(message);
     }
   }
+
   return `[${timeStr}] [${level}] ${msgStr}\n`;
 }
 
 /**
  * 统一日志处理类
- * 支持写入日志文件和单次调用时控制是否打印控制台
+ * 支持写入日志文件和控制台打印
  */
 export class Logger {
   private logsDir: string;
