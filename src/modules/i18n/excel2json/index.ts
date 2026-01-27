@@ -136,6 +136,54 @@ async function batchCheckTexts(
 }
 
 /**
+ * 将语言检测结果转换成每条词条对应的错误描述数组
+ * @param checkResult 语言检测结果
+ * @param texts 词条数组（对应检测文本）
+ * @returns 按词条分割的检测错误描述数组，顺序对应输入texts
+ */
+function parseCheckResultPerEntry(
+  checkResult: CheckResult,
+  texts: string[]
+): string[] {
+  // 初始化每条词条对应的错误信息数组
+  const entryErrors = new Array(texts.length).fill('').map(() => '');
+
+  // 语言检测返回的matches是针对整个拼接文本的，需要拆分到对应词条
+  // 计算每条词条在拼接文本中的起始位置和结束位置
+  const positions: { start: number; end: number }[] = [];
+  let pos = 0;
+  for (const text of texts) {
+    const len = text.length;
+    positions.push({ start: pos, end: pos + len });
+    pos += len + 1; // +1是换行符长度
+  }
+
+  // 遍历所有错误匹配项，将错误信息分配到对应词条
+  for (const match of checkResult.matches) {
+    const errorOffset = match.offset;
+    // 找出错误所在的词条索引
+    const idx = positions.findIndex(
+      (range) => errorOffset >= range.start && errorOffset < range.end
+    );
+    if (idx === -1) continue;
+
+    // 生成错误信息字符串
+    const errMsg = `错误: ${match.message}\n出错句子: ${match.sentence}\n建议替换: ${match.replacements
+      .map((r) => r.value)
+      .join(', ')}`;
+
+    // 多条错误用换行分隔
+    if (entryErrors[idx]) {
+      entryErrors[idx] += '\n' + errMsg;
+    } else {
+      entryErrors[idx] = errMsg;
+    }
+  }
+
+  return entryErrors;
+}
+
+/**
  * excel转json功能主函数
  * 读取用户输入的excel路径，解析内容，根据配置生成多语言json文件
  * 并对配置文件中所有语言对应的词条进行语言检测
@@ -300,19 +348,30 @@ export async function excel2json(program: Command) {
           const valStr = String(valCell);
           langTranslations[langKey][key] = valStr;
           langKeysMap[langKey].push(valStr);
+        } else {
+          // 如果单元格为空，也要保证检测结果数组长度一致，填空字符串
+          langKeysMap[langKey].push('');
         }
       }
     }
+
+    // 语言检测结果映射，语言key => 每条词条的错误描述数组
+    const langCheckErrorsMap: Record<string, string[]> = {};
 
     // 对所有语言词条批量进行语言检测（包括默认语言）
     for (const [langKey, texts] of Object.entries(langKeysMap)) {
       const longCode = i18nConfig.longCodes[langKey];
       if (!longCode) {
         logger.warn(`语言(${langKey})未配置 longCode，跳过检测`);
+        langCheckErrorsMap[langKey] =
+          texts.length > 0
+            ? texts.map(() => '未配置 longCode，未进行检测')
+            : ['无词条'];
         continue;
       }
       if (texts.length === 0) {
         logger.info(`语言(${langKey})无词条，跳过检测`);
+        langCheckErrorsMap[langKey] = ['无词条'];
         continue;
       }
 
@@ -324,16 +383,22 @@ export async function excel2json(program: Command) {
 
       if (!checkResults || checkResults.length === 0 || !checkResults[0]) {
         logger.error(`语言(${langKey})词条检测失败`);
+        langCheckErrorsMap[langKey] = texts.map(() => '检测失败，未知错误');
         continue;
       }
 
       const result = checkResults[0];
       if (result.matches.length === 0) {
         logger.info(`语言(${langKey})词条检测无错误`);
+        langCheckErrorsMap[langKey] = texts.map(() => '无错误');
       } else {
         logger.info(
           `语言(${langKey})词条检测发现问题，词条数量: ${result.matches.length}`
         );
+        // 解析检测结果，拆分到每条词条
+        langCheckErrorsMap[langKey] = parseCheckResultPerEntry(result, texts);
+
+        // 详细日志输出
         for (const match of result.matches) {
           logger.info(
             `- 错误: ${match.message}\n  出错句子: ${match.sentence}\n  建议替换: ${match.replacements
@@ -375,7 +440,65 @@ export async function excel2json(program: Command) {
       logger.info(`已生成语言文件：${filePath}`);
     }
 
-    logger.info('全部转换完成', true);
+    // 生成语言检测结果excel文件
+    logger.info('开始生成语言检测结果excel文件');
+
+    // 构造检测结果excel的表头：默认语言列 + 其他语言列（对应原文列名）
+    // 这里表头用原excel的表头中对应语言列的值
+    const errorSheetHeader: string[] = [];
+
+    // 按列索引顺序遍历，匹配语言key，构造表头
+    Object.entries(colIndexToLangKey)
+      .sort((a, b) => Number(a[0]) - Number(b[0]))
+      .forEach(([colIdxStr, langKey]) => {
+        const colIdx = Number(colIdxStr);
+        // 表头为原excel表头中对应列的文字
+        errorSheetHeader.push(headerRow[colIdx]);
+      });
+
+    // 构造检测结果excel的内容，每一列对应语言检测错误描述
+    // 每行对应原excel中一条数据行
+    const errorSheetData: (string | null)[][] = [errorSheetHeader];
+
+    // 数据行数（不包括表头）
+    const dataRowCount = rows.length - 1;
+
+    for (let i = 0; i < dataRowCount; i++) {
+      const rowErrors: (string | null)[] = [];
+
+      // 按列索引顺序遍历，填充对应语言的检测错误
+      Object.entries(colIndexToLangKey)
+        .sort((a, b) => Number(a[0]) - Number(b[0]))
+        .forEach(([colIdxStr, langKey]) => {
+          const errorsArr = langCheckErrorsMap[langKey];
+          if (errorsArr && errorsArr.length > i) {
+            rowErrors.push(errorsArr[i] || '');
+          } else {
+            // 可能某些语言词条数量不足时，填空
+            rowErrors.push('');
+          }
+        });
+
+      errorSheetData.push(rowErrors);
+    }
+
+    // 生成excel工作簿和工作表
+    const errorWorkbook = XLSX.utils.book_new();
+    const errorSheet = XLSX.utils.aoa_to_sheet(errorSheetData);
+    XLSX.utils.book_append_sheet(
+      errorWorkbook,
+      errorSheet,
+      'LanguageCheckResults'
+    );
+
+    // 写入检测结果excel文件，固定文件名 lang_check_results.xlsx
+    const errorExcelPath = path.join(outputRoot, `lang_check_results.xlsx`);
+    XLSX.writeFile(errorWorkbook, errorExcelPath);
+
+    logger.info(`语言检测结果excel文件已生成：${errorExcelPath}`);
+
+    // 最终完成提示，包含输出目录
+    logger.info(`全部转换完成，语言文件输出目录：${outputRoot}`, true);
   } catch (error: unknown) {
     // 记录错误日志，方便排查
     loggerError(error, logger);
