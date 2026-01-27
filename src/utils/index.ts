@@ -76,8 +76,14 @@ function getRootDir(): string {
  */
 const defaultOptions: LoggerOptions = {
   logsDir: path.resolve(getRootDir(), 'logs'),
-  filenameFormatter: (date: Date) =>
-    date.toISOString().slice(0, 10).replace(/-/g, '') + '.txt',
+  filenameFormatter: (date: Date) => {
+    // 使用本地时间格式化，格式 YYYYMMDD.txt
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    return `${year}${month}${day}.txt`;
+  },
   env: process.env.NODE_ENV || 'production',
 };
 
@@ -89,7 +95,29 @@ const defaultOptions: LoggerOptions = {
  * @returns 格式化后的日志字符串
  */
 function formatLogLine(level: LogLevel, message: unknown, date: Date): string {
-  const timeStr = date.toISOString();
+  // 使用本地时间格式化为 ISO-like 字符串（带时区偏移）
+  // 格式示例：2026-01-23T13:55:00+08:00
+  function formatLocalISO(date: Date): string {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hour = pad(date.getHours());
+    const minute = pad(date.getMinutes());
+    const second = pad(date.getSeconds());
+
+    // 计算时区偏移，单位分钟
+    const tzOffset = -date.getTimezoneOffset();
+    const sign = tzOffset >= 0 ? '+' : '-';
+    const tzHour = pad(Math.floor(Math.abs(tzOffset) / 60));
+    const tzMinute = pad(Math.abs(tzOffset) % 60);
+
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}${sign}${tzHour}:${tzMinute}`;
+  }
+
+  const timeStr = formatLocalISO(date);
+
   let msgStr: string;
 
   if (typeof message === 'string') {
