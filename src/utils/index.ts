@@ -41,7 +41,7 @@ type LogLevel = 'INFO' | 'WARN' | 'ERROR';
  */
 interface LoggerOptions {
   /**
-   * 日志目录，默认程序入口文件所在目录的上级目录的 logs 文件夹
+   * 日志目录，默认根目录下的 logs 文件夹
    */
   logsDir?: string;
 
@@ -55,41 +55,30 @@ interface LoggerOptions {
    * 当前环境，默认 process.env.NODE_ENV
    */
   env?: string;
-
-  /**
-   * 程序入口文件绝对路径，用于确定日志目录位置
-   */
-  entryFilePath?: string;
 }
 
 /**
- * 获取程序入口文件路径（兼容 ES Module）
- * @returns 程序入口文件的绝对路径
+ * 获取项目根目录路径，兼容 ESM
+ * @returns 根目录绝对路径
  */
-function getEntryFilePath(): string {
-  try {
-    // 当前模块文件路径
-    return fileURLToPath(import.meta.url);
-  } catch {
-    // 兜底：使用 process.argv[1]
-    if (process.argv.length > 1) {
-      return path.resolve(process.cwd(), process.argv[1]);
-    }
-    // 最终兜底
-    return '';
-  }
+function getRootDir(): string {
+  // 当前模块文件路径
+  const __filename = fileURLToPath(import.meta.url);
+  // 当前模块目录
+  const __dirname = path.dirname(__filename);
+  // 根目录为当前模块目录的上两级，视项目结构调整
+  return path.resolve(__dirname, '../../');
 }
 
 /**
  * 默认日志配置
- * logsDir 默认设置为程序入口文件所在目录的上级目录的 logs 文件夹
+ * logsDir 默认设置为项目根目录的 logs 文件夹
  */
 const defaultOptions: LoggerOptions = {
-  logsDir: '',
+  logsDir: path.resolve(getRootDir(), 'logs'),
   filenameFormatter: (date: Date) =>
     date.toISOString().slice(0, 10).replace(/-/g, '') + '.txt',
   env: process.env.NODE_ENV || 'production',
-  entryFilePath: getEntryFilePath(),
 };
 
 /**
@@ -132,10 +121,8 @@ export class Logger {
   constructor(options?: LoggerOptions) {
     const opts = { ...defaultOptions, ...options };
 
-    // 如果未传 logsDir，则默认设置为入口文件所在目录的上级目录的 logs 文件夹
-    this.logsDir =
-      opts.logsDir ||
-      path.resolve(path.dirname(opts.entryFilePath!), '..', 'logs');
+    // 如果未传 logsDir，则默认设置为根目录的 logs 文件夹
+    this.logsDir = opts.logsDir!;
     this.filenameFormatter =
       opts.filenameFormatter ?? defaultOptions.filenameFormatter!;
     this.env = opts.env ?? defaultOptions.env!;
