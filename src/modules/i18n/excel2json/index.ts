@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { input } from '@inquirer/prompts';
 import XLSX from 'xlsx';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import path from 'path';
 import {
   getTimestamp,
@@ -12,6 +13,10 @@ import {
   languageToolCheck,
   getLanguageTool,
 } from '../../../utils/index.js';
+
+// 获取当前文件目录
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 type Row = (string | number | null | undefined)[];
 
@@ -138,7 +143,7 @@ async function batchCheckTexts(
  */
 export async function excel2json(program: Command) {
   // 配置文件默认路径
-  const configPath = path.join(process.cwd(), 'src/config/setting.json');
+  const configPath = path.join(__dirname, '../../../../setting.json');
   let i18nConfig: I18nConfig;
 
   // 加载配置文件
