@@ -350,7 +350,7 @@ export async function excel2json(program: Command) {
           langTranslations[langKey][key] = valStr;
           langKeysMap[langKey].push(valStr);
         } else {
-          // 如果单元格为空，也要保证检测结果数组长度一致，填空字符串
+          // 确保检测结果数组长度一致，填空字符串
           langKeysMap[langKey].push('');
         }
       }
@@ -367,14 +367,12 @@ export async function excel2json(program: Command) {
       if (!longCode) {
         logger.warn(`语言(${langKey})未配置 longCode，跳过检测`, true);
         langCheckErrorsMap[langKey] =
-          texts.length > 0
-            ? texts.map(() => '未配置 longCode，未进行检测')
-            : ['无词条'];
+          texts.length > 0 ? texts.map(() => '') : [];
         continue;
       }
       if (texts.length === 0) {
         logger.info(`语言(${langKey})无词条，跳过检测`, true);
-        langCheckErrorsMap[langKey] = ['无词条'];
+        langCheckErrorsMap[langKey] = [];
         continue;
       }
 
@@ -387,14 +385,14 @@ export async function excel2json(program: Command) {
 
       if (!checkResults || checkResults.length === 0 || !checkResults[0]) {
         logger.error(`语言(${langKey})词条检测失败`, true);
-        langCheckErrorsMap[langKey] = texts.map(() => '检测失败，未知错误');
+        langCheckErrorsMap[langKey] = texts.map(() => '');
         continue;
       }
 
       const result = checkResults[0];
       if (result.matches.length === 0) {
         logger.info(`语言(${langKey})词条检测无错误`, true);
-        langCheckErrorsMap[langKey] = texts.map(() => '无错误');
+        langCheckErrorsMap[langKey] = texts.map(() => '');
       } else {
         logger.info(
           `语言(${langKey})词条检测发现问题，词条数量: ${result.matches.length}`,
@@ -463,10 +461,8 @@ export async function excel2json(program: Command) {
 
     // 构造检测结果excel的内容，每一列对应语言检测错误描述
     // 每行对应原excel中一条数据行
-    const errorSheetData: (string | null)[][] = [errorSheetHeader];
-
-    // 数据行数（不包括表头）
     const dataRowCount = rows.length - 1;
+    const errorSheetData: (string | null)[][] = [errorSheetHeader];
 
     for (let i = 0; i < dataRowCount; i++) {
       const rowErrors: (string | null)[] = [];
@@ -477,9 +473,10 @@ export async function excel2json(program: Command) {
         .forEach(([colIdxStr, langKey]) => {
           const errorsArr = langCheckErrorsMap[langKey];
           if (errorsArr && errorsArr.length > i) {
-            rowErrors.push(errorsArr[i] || '');
+            // 只展示检测错误，空字符串视为空白
+            const err = errorsArr[i]?.trim();
+            rowErrors.push(err && err.length > 0 ? err : '');
           } else {
-            // 可能某些语言词条数量不足时，填空
             rowErrors.push('');
           }
         });
