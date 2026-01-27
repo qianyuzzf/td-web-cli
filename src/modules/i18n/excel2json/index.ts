@@ -196,9 +196,9 @@ export async function excel2json(program: Command) {
 
   // 加载配置文件
   try {
-    logger.info(`开始加载配置文件：${configPath}`);
+    logger.info(`开始加载配置文件：${configPath}`, true);
     i18nConfig = loadConfig(configPath);
-    logger.info('配置文件加载成功');
+    logger.info('配置文件加载成功', true);
   } catch (error: unknown) {
     const msg = `读取配置文件失败：${normalizeError(error).stack}，程序已退出`;
     logger.error(msg);
@@ -208,9 +208,9 @@ export async function excel2json(program: Command) {
 
   // 尝试调用接口获取支持的语言列表，更新 longCodes
   try {
-    logger.info('尝试获取在线支持的语言列表...');
+    logger.info('尝试获取在线支持的语言列表...', true);
     const languageTools = await getLanguageTool();
-    logger.info(`成功获取语言列表，覆盖配置文件中的 longCodes`);
+    logger.info(`成功获取语言列表，覆盖配置文件中的 longCodes`, true);
 
     // 构建新的 longCodes 映射
     const newLongCodes: Record<string, string> = {};
@@ -241,6 +241,7 @@ export async function excel2json(program: Command) {
     logger.warn(
       `获取在线语言列表失败，使用本地配置 longCodes，错误：${normalizeError(error).stack}`
     );
+    console.warn('获取在线语言列表失败，使用本地配置 longCodes');
   }
 
   // 交互式输入excel文件路径并校验
@@ -263,7 +264,7 @@ export async function excel2json(program: Command) {
   );
 
   try {
-    logger.info(`开始读取excel文件：${excelPath}`);
+    logger.info(`开始读取excel文件：${excelPath}`, true);
 
     // 读取excel文件
     const workbook = XLSX.readFile(excelPath);
@@ -284,7 +285,7 @@ export async function excel2json(program: Command) {
       process.exit(1);
     }
 
-    logger.info('开始解析表头');
+    logger.info('开始解析表头', true);
     // 处理表头行，去除空格，转成字符串
     const headerRow = rows[0].map((cell) => (cell ? String(cell).trim() : ''));
 
@@ -316,7 +317,7 @@ export async function excel2json(program: Command) {
       langTranslations[langKey] = {};
     });
 
-    logger.info('开始解析数据行');
+    logger.info('开始解析数据行', true);
     // 遍历数据行，提取所有语言词条
     // key统一用默认语言列的值，其他语言对应的列为翻译内容
     const langKeysMap: Record<string, string[]> = {}; // 语言key => 词条数组
@@ -359,10 +360,12 @@ export async function excel2json(program: Command) {
     const langCheckErrorsMap: Record<string, string[]> = {};
 
     // 对所有语言词条批量进行语言检测（包括默认语言）
-    for (const [langKey, texts] of Object.entries(langKeysMap)) {
+    const langKeysEntries = Object.entries(langKeysMap);
+    for (let idx = 0; idx < langKeysEntries.length; idx++) {
+      const [langKey, texts] = langKeysEntries[idx];
       const longCode = i18nConfig.longCodes[langKey];
       if (!longCode) {
-        logger.warn(`语言(${langKey})未配置 longCode，跳过检测`);
+        logger.warn(`语言(${langKey})未配置 longCode，跳过检测`, true);
         langCheckErrorsMap[langKey] =
           texts.length > 0
             ? texts.map(() => '未配置 longCode，未进行检测')
@@ -370,30 +373,32 @@ export async function excel2json(program: Command) {
         continue;
       }
       if (texts.length === 0) {
-        logger.info(`语言(${langKey})无词条，跳过检测`);
+        logger.info(`语言(${langKey})无词条，跳过检测`, true);
         langCheckErrorsMap[langKey] = ['无词条'];
         continue;
       }
 
       logger.info(
-        `开始对语言(${langKey})词条进行语言检测，词条数量：${texts.length}`
+        `开始对语言(${langKey})词条进行语言检测，词条数量：${texts.length} (${idx + 1}/${langKeysEntries.length})`,
+        true
       );
 
       const checkResults = await batchCheckTexts(texts, longCode);
 
       if (!checkResults || checkResults.length === 0 || !checkResults[0]) {
-        logger.error(`语言(${langKey})词条检测失败`);
+        logger.error(`语言(${langKey})词条检测失败`, true);
         langCheckErrorsMap[langKey] = texts.map(() => '检测失败，未知错误');
         continue;
       }
 
       const result = checkResults[0];
       if (result.matches.length === 0) {
-        logger.info(`语言(${langKey})词条检测无错误`);
+        logger.info(`语言(${langKey})词条检测无错误`, true);
         langCheckErrorsMap[langKey] = texts.map(() => '无错误');
       } else {
         logger.info(
-          `语言(${langKey})词条检测发现问题，词条数量: ${result.matches.length}`
+          `语言(${langKey})词条检测发现问题，词条数量: ${result.matches.length}`,
+          true
         );
         // 解析检测结果，拆分到每条词条
         langCheckErrorsMap[langKey] = parseCheckResultPerEntry(result, texts);
@@ -417,14 +422,14 @@ export async function excel2json(program: Command) {
       fs.mkdirSync(outputRoot, { recursive: true });
     }
 
-    logger.info(`开始生成语言文件，输出目录：${outputRoot}`);
+    logger.info(`开始生成语言文件，输出目录：${outputRoot}`, true);
 
     // 按语言生成对应的json文件，默认语言的key=value不生成文件
     for (const [langKey, translations] of Object.entries(langTranslations)) {
       if (Object.keys(translations).length === 0) continue;
 
       if (langKey === defaultLang) {
-        logger.info(`跳过默认语言(${langKey})的json文件生成`);
+        logger.info(`跳过默认语言(${langKey})的json文件生成`, true);
         continue; // 跳过默认语言文件生成
       }
 
@@ -437,11 +442,11 @@ export async function excel2json(program: Command) {
       fs.writeFileSync(filePath, JSON.stringify(translations, null, 2), {
         encoding: 'utf-8',
       });
-      logger.info(`已生成语言文件：${filePath}`);
+      logger.info(`已生成语言文件：${filePath}`, true);
     }
 
     // 生成语言检测结果excel文件
-    logger.info('开始生成语言检测结果excel文件');
+    logger.info('开始生成语言检测结果excel文件', true);
 
     // 构造检测结果excel的表头：默认语言列 + 其他语言列（对应原文列名）
     // 这里表头用原excel的表头中对应语言列的值
@@ -495,7 +500,7 @@ export async function excel2json(program: Command) {
     const errorExcelPath = path.join(outputRoot, `lang_check_results.xlsx`);
     XLSX.writeFile(errorWorkbook, errorExcelPath);
 
-    logger.info(`语言检测结果excel文件已生成：${errorExcelPath}`);
+    logger.info(`语言检测结果excel文件已生成：${errorExcelPath}`, true);
 
     // 最终完成提示，包含输出目录
     logger.info(`全部转换完成，语言文件输出目录：${outputRoot}`, true);
