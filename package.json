@@ -7,6 +7,9 @@
   "bin": {
     "td-web-cli": "dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "format": "prettier --write \"src/**/*.{js,ts,tsx,json,md}\""
