@@ -5,7 +5,7 @@ import { execSync } from "child_process";
 import { input } from "@inquirer/prompts";
 
 function exitWithError(msg) {
-  console.error(`\x1b[31mError: ${msg}\x1b[0m`);
+  console.error(`\x1b[31merror：${msg}\x1b[0m`);
   process.exit(1);
 }
 
@@ -43,14 +43,14 @@ async function main() {
     if (!currentVersion) exitWithError("package.json 中没有找到 version 字段");
 
     const defaultVersion = incrementVersion(currentVersion);
-    if (!defaultVersion) exitWithError(`无法解析当前版本号: ${currentVersion}`);
+    if (!defaultVersion) exitWithError(`无法解析当前版本号：${currentVersion}`);
 
-    logStep(`当前版本号: ${currentVersion}`);
-    logStep(`默认新版本号: ${defaultVersion}`);
+    logStep(`当前版本号：${currentVersion}`);
+    logStep(`默认新版本号：${defaultVersion}`);
 
     // 交互输入新版本号，支持默认值、格式校验和版本号大小校验
     const newVersion = await input({
-      message: "请输入新的版本号",
+      message: "请输入新的版本号：",
       default: defaultVersion,
       required: true,
       pattern: /^\d+\.\d+\.\d+$/,
@@ -67,7 +67,7 @@ async function main() {
       },
     });
 
-    logStep(`设置新版本号为: ${newVersion}`);
+    logStep(`设置新版本号为：${newVersion}`);
 
     // 更新 package.json 中的版本号
     pkg.version = newVersion;

@@ -1,6 +1,6 @@
 # 项目名称
 
-一个基于 Node.js 和 TypeScript 的高效 CLI 工具，用于提升工作效率。
+一个基于 node.js 和 typeScript 的高效 cli 工具，用于提升工作效率。
 
 ---
 
@@ -18,11 +18,11 @@
 
 ## 环境要求
 
-- Node.js >= 20.x（推荐使用 22.x 或更高版本）
+- node.js >= 20.x（推荐使用 22.x 或更高版本）
 - npm >= 10.x
-- TypeScript >= 5.x
+- typeScript >= 5.x
 
-> **注意**：部分依赖可能要求 Node.js 20 及以上版本，请根据实际情况调整。
+> **注意**：部分依赖可能要求 node.js 20 及以上版本，请根据实际情况调整。
 
 ---
 
@@ -47,8 +47,8 @@ npm install
 
 ### 代码结构
 
-- `src/` - TypeScript 源代码目录
-- `dist/` - 编译后的 JavaScript 输出目录
+- `src/` - typeScript 源代码目录
+- `dist/` - 编译后的 javaScript 输出目录
 - `release.js` - 发布脚本（可直接运行或编译后运行）
 
 ### 运行开发环境
@@ -59,7 +59,7 @@ npm link
 td-web-cli  # 确保本机未全局安装该工具
 ```
 
-通过 `npm link`，本地调试 CLI 命令 `td-web-cli`。
+通过 `npm link`，本地调试 cli 命令 `td-web-cli`。
 
 ---
 
@@ -67,7 +67,7 @@ td-web-cli  # 确保本机未全局安装该工具
 
 ### 命令行执行
 
-执行 CLI 工具：
+执行 cli 工具：
 
 ```bash
 td-web-cli
@@ -75,13 +75,13 @@ td-web-cli
 
 ### 功能说明
 
-- 将 Excel 表格转换为对应的 JSON 文件，简化数据处理流程。
+- 将 excel 表格转换为对应的 json 文件，简化数据处理流程。
 
 ---
 
 ## 构建
 
-使用 TypeScript 编译项目：
+使用 typeScript 编译项目：
 
 ```bash
 npm run build
@@ -105,7 +105,7 @@ npm run release
 - 依赖安装
 - 项目构建
 - 发布到 npm
-- 提交并推送 Git 代码
+- 提交并推送 git 代码
 
 ---
 
@@ -113,17 +113,17 @@ npm run release
 
 ```
 .
-├── src/                  # TypeScript 源代码
+├── src/                  # typeScript 源代码
 │   └── index.ts          # 入口文件
 ├── dist/                 # 编译输出目录
 ├── release.js            # 发布脚本
 ├── setting.json          # 配置文件
 ├── package.json          # 项目配置
-├── tsconfig.json         # TypeScript 配置
+├── tsconfig.json         # typeScript 配置
 ├── README.md             # 项目说明文件
-├── .gitignore            # Git 忽略文件
-├── .prettierignore       # Prettier 忽略文件
-├── .prettierrc           # Prettier 配置文件
+├── .gitignore            # git 忽略文件
+├── .prettierignore       # prettier 忽略文件
+├── .prettierrc           # prettier 配置文件
 └── package-lock.json     # 依赖锁定文件
 ```
 
