@@ -31,8 +31,8 @@
 1. 克隆仓库
 
 ```bash
-git clone <仓库地址>
-cd your-project
+git clone https://github.com/qianyuzzf/td-web-cli.git
+cd td-web-cli
 ```
 
 2. 安装依赖
@@ -75,7 +75,7 @@ td-web-cli
 
 ### 功能说明
 
-- 多语言 excel 转 json 工具。[功能说明](./docs/i18n/excel2json.md)
+- 多语言 excel 转 json 工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/excel2json.md)
 
 ---
 
