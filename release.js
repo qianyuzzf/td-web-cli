@@ -90,10 +90,13 @@ async function main() {
     logStep("开始执行 npm publish ...");
     execSync("npm publish", { stdio: "inherit" });
 
-    // 提交代码到 git 仓库
+    // 提交代码到 git 仓库并推送到远程
     logStep("开始提交代码到 git 仓库...");
     execSync("git add .", { stdio: "inherit" });
     execSync(`git commit -m "${newVersion}版本发布"`, { stdio: "inherit" });
+
+    logStep("开始推送代码到远程仓库...");
+    execSync("git push", { stdio: "inherit" });
 
     logStep("发布流程完成！");
   } catch (err) {
