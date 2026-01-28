@@ -17,6 +17,9 @@
     "format": "prettier --write \"src/**/*.{js,ts,tsx,json,md}\"",
     "release": "node ./release.js"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
