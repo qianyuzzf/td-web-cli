@@ -12,6 +12,7 @@ import {
   CheckResult,
   languageToolCheck,
   getLanguageTool,
+  formatKey,
 } from '../../../utils/index.js';
 
 // 获取当前文件目录
@@ -187,6 +188,7 @@ function parseCheckResultPerEntry(
  * excel转json功能主函数
  * 读取用户输入的excel路径，解析内容，根据配置生成多语言json文件
  * 并对配置文件中所有语言对应的词条进行语言检测
+ * 如果有相同的json key，则在key前面加上6位编码，保证唯一性
  * @param program Commander命令行实例
  */
 export async function excel2json(program: Command) {
@@ -312,22 +314,30 @@ export async function excel2json(program: Command) {
     const defaultColNum = Number(defaultColIndex);
 
     // 初始化所有语言词条对象（包括默认语言）
+    // 用于存储最终的翻译key-value对，key可能会被重新编码以避免重复
     const langTranslations: Record<string, Record<string, string>> = {};
     Object.values(colIndexToLangKey).forEach((langKey) => {
       langTranslations[langKey] = {};
     });
 
     logger.info('开始解析数据行', true);
+
+    // 记录所有出现过的key，检测重复，格式：langKey => Set of keys
+    const langKeySets: Record<string, Set<string>> = {};
+    Object.keys(langTranslations).forEach((langKey) => {
+      langKeySets[langKey] = new Set();
+    });
+
     // 遍历数据行，提取所有语言词条
     // key统一用默认语言列的值，其他语言对应的列为翻译内容
-    const langKeysMap: Record<string, string[]> = {}; // 语言key => 词条数组
+    const langKeysMap: Record<string, string[]> = {}; // 语言key => 词条数组（用于检测）
     Object.keys(langTranslations).forEach((langKey) => {
       langKeysMap[langKey] = [];
     });
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      const keyCell = row[defaultColNum];
+      let keyCell = row[defaultColNum];
       if (keyCell === undefined || keyCell === null || keyCell === '') continue;
 
       let key = String(keyCell).trim();
@@ -335,6 +345,12 @@ export async function excel2json(program: Command) {
 
       // 跳过空key，避免写入无效数据
       if (key.length === 0) continue;
+
+      // 判断默认语言key是否重复，若重复则重新编码
+      if (langKeySets[defaultLang].has(key)) {
+        key = formatKey(key);
+      }
+      langKeySets[defaultLang].add(key);
 
       // 默认语言的词条即key本身
       langTranslations[defaultLang][key] = key;
@@ -347,7 +363,15 @@ export async function excel2json(program: Command) {
         const valCell = row[colIdx];
         if (valCell !== undefined && valCell !== null && valCell !== '') {
           const valStr = String(valCell);
-          langTranslations[langKey][key] = valStr;
+
+          // 判断该语言的key是否重复，若重复则重新编码key
+          let finalKey = key;
+          if (langKeySets[langKey].has(finalKey)) {
+            finalKey = formatKey(finalKey);
+          }
+          langKeySets[langKey].add(finalKey);
+
+          langTranslations[langKey][finalKey] = valStr;
           langKeysMap[langKey].push(valStr);
         } else {
           // 确保检测结果数组长度一致，填空字符串

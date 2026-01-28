@@ -365,3 +365,46 @@ export async function languageToolCheck(
     throw new Error(`${url}接口报错：${normalizeError(error).stack}`);
   }
 }
+
+/**
+ * 对字符串重新编码，字符串前面加上6位的特殊编码（格式：字母#三个字母#）
+ * 例如：a#BCD#yourString
+ * @param key 需要进行重新编码的字符串
+ * @returns 带有特殊编码前缀的字符串
+ */
+export function formatKey(key: string): string {
+  const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const codeTemplate = '{0}#{1}{2}{3}#';
+
+  // 先解码，防止重复添加前缀
+  const decodedKey = decodeKey(key);
+
+  // 随机选取4个字母替换模板中的占位符
+  const getRandomLetter = () =>
+    letters[Math.floor(Math.random() * letters.length)];
+  const code = codeTemplate
+    .replace('{0}', getRandomLetter())
+    .replace('{1}', getRandomLetter())
+    .replace('{2}', getRandomLetter())
+    .replace('{3}', getRandomLetter());
+
+  return code + decodedKey;
+}
+
+/**
+ * 对重新编码的字符串进行解码，去除前面6位特殊编码部分
+ * @param key 需要解码的字符串
+ * @returns 去除特殊编码前缀后的字符串
+ */
+export function decodeKey(key: string): string {
+  if (!key) {
+    return '';
+  }
+
+  // 匹配开头格式：字母#三个字母#
+  // ^ 开头， [a-zA-Z] 一个字母， \# 字符 #， [a-zA-Z]{3} 三个字母， \# 字符 #
+  const prefixRegex = /^[a-zA-Z]\#[a-zA-Z]{3}\#/;
+
+  // 去除前缀
+  return key.replace(prefixRegex, '');
+}
