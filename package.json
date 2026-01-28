@@ -1,6 +1,6 @@
 {
   "name": "td-web-cli",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "A CLI tool for efficiency",
   "main": "dist/index.js",
   "type": "module",
@@ -9,7 +9,8 @@
   },
   "files": [
     "dist",
-    "setting.json"
+    "setting.json",
+    "docs/**/*.md"
   ],
   "scripts": {
     "build": "tsc",

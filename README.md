@@ -75,7 +75,7 @@ td-web-cli
 
 ### 功能说明
 
-- 将 excel 表格转换为对应的 json 文件，简化数据处理流程。
+- 多语言 excel 转 json 工具。[功能说明](./docs/i18n/excel2json.md)
 
 ---
 
