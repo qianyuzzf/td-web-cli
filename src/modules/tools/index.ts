@@ -1,38 +1,23 @@
 import { Command } from 'commander';
 import { select, Separator } from '@inquirer/prompts';
 import { logger, loggerError } from '../../utils/index.js';
-import { excel2json } from './excel2json/index.js';
+import { getHolidayTime } from './getHolidayTime/index.js';
 
 /**
- * 国际化模块主入口
- * 提供多个国际化相关功能的交互式选择
+ * 小工具模块主入口
+ * 提供多个小工具相关功能的交互式选择
  * @param program Commander命令行实例，用于传递参数和配置
  */
-export async function i18n(program: Command) {
+export async function tools(program: Command) {
   try {
-    logger.info('国际化模块启动，等待用户选择功能');
+    logger.info('小工具模块启动，等待用户选择功能');
 
     // 定义可用功能选项
     const moduleChoices = [
       {
-        name: '提取词条',
-        value: 'extractEntry',
-        description: '从所给路径中提取词条信息',
-      },
-      {
-        name: 'json转excel',
-        value: 'json2excel',
-        description: '将json格式的词条信息转换为excel表格',
-      },
-      {
-        name: 'excel转json',
-        value: 'excel2json',
-        description: '将excel表格转换为json格式的词条信息',
-      },
-      {
-        name: 'json合并',
-        value: 'jsonMerge',
-        description: '合并多个json格式的词条信息文件',
+        name: '获取假期时间',
+        value: 'getHolidayTime',
+        description: '获取今年的假期时间列表',
       },
     ];
 
@@ -43,7 +28,7 @@ export async function i18n(program: Command) {
         ...moduleChoices,
         new Separator(), // 分割线，方便未来扩展更多功能
       ],
-      default: 'extractEntry', // 默认选项
+      default: 'getHolidayTime', // 默认选项
       pageSize: 10, // 最大显示选项数
       loop: true, // 是否循环滚动选项
     });
@@ -60,9 +45,9 @@ export async function i18n(program: Command) {
 
     // 根据选择执行对应功能
     switch (answer) {
-      case 'excel2json':
+      case 'getHolidayTime':
         logger.info(`${selectedModule.name}功能开始执行`);
-        await excel2json(program);
+        await getHolidayTime();
         logger.info(`${selectedModule.name}功能执行完成`);
         break;
       default:

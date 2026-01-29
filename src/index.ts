@@ -7,8 +7,9 @@
 
 import { Command } from 'commander';
 import { select, Separator } from '@inquirer/prompts';
-import { i18n } from './modules/i18n/index.js';
 import { logger, loggerError } from './utils/index.js';
+import { i18n } from './modules/i18n/index.js';
+import { tools } from './modules/tools/index.js';
 
 const program = new Command();
 
@@ -30,6 +31,11 @@ async function main() {
         name: '国际化',
         value: 'i18n',
         description: '国际化相关功能',
+      },
+      {
+        name: '小工具',
+        value: 'tools',
+        description: '小工具相关功能',
       },
     ];
 
@@ -60,6 +66,11 @@ async function main() {
       case 'i18n':
         logger.info(`${selectedModule.name}模块开始执行`);
         await i18n(program);
+        logger.info(`${selectedModule.name}模块执行完成`);
+        break;
+      case 'tools':
+        logger.info(`${selectedModule.name}模块开始执行`);
+        await tools(program);
         logger.info(`${selectedModule.name}模块执行完成`);
         break;
       default:
