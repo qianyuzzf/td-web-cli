@@ -1,6 +1,6 @@
 {
   "name": "td-web-cli",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "A CLI tool for efficiency",
   "main": "dist/index.js",
   "type": "module",
