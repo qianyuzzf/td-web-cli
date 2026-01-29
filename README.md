@@ -76,6 +76,7 @@ td-web-cli
 ### 功能说明
 
 - 多语言 Excel 转 JSON 工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/excel2json.md)
+- 获取假期时间工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/getHolidayTime.md)
 
 ---
 
@@ -113,18 +114,19 @@ npm run release
 
 ```
 .
-├── src/                  # TypeScript 源代码
-│   └── index.ts          # 入口文件
-├── dist/                 # 编译输出目录
-├── release.js            # 发布脚本
-├── setting.json          # 配置文件
-├── package.json          # 项目配置
-├── tsconfig.json         # TypeScript 配置
-├── README.md             # 项目说明文件
-├── .gitignore            # Git 忽略文件
-├── .prettierignore       # Prettier 忽略文件
-├── .prettierrc           # Prettier 配置文件
-└── package-lock.json     # 依赖锁定文件
+├── src/                  # TypeScript 源代码目录，存放项目的核心业务代码
+│   └── index.ts          # 入口文件，程序的启动点
+├── dist/                 # 编译输出目录，存放 TypeScript 编译后的 JavaScript 文件
+├── docs/                 # 项目文档目录，包含功能说明、使用手册、设计文档等
+├── release.js            # 发布脚本，自动化完成版本发布相关操作
+├── setting.json          # 配置文件，存放项目运行所需的配置信息
+├── package.json          # npm 项目配置文件，定义依赖、脚本和元信息
+├── tsconfig.json         # TypeScript 配置文件，指定编译选项和项目结构
+├── README.md             # 项目说明文件，提供项目简介、安装使用等基础信息
+├── .gitignore            # Git 忽略文件，指定不纳入版本控制的文件或目录
+├── .prettierignore       # Prettier 忽略文件，指定格式化工具忽略的文件或目录
+├── .prettierrc           # Prettier 配置文件，定义代码格式化规则
+└── package-lock.json     # 依赖锁定文件，确保安装依赖版本一致
 ```
 
 ---
