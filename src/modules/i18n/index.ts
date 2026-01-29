@@ -20,19 +20,19 @@ export async function i18n(program: Command) {
         description: '从所给路径中提取词条信息',
       },
       {
-        name: 'json转excel',
+        name: 'JSON转Excel',
         value: 'json2excel',
-        description: '将json格式的词条信息转换为excel表格',
+        description: '将JSON格式的词条信息转换为Excel表格',
       },
       {
-        name: 'excel转json',
+        name: 'Excel转JSON',
         value: 'excel2json',
-        description: '将excel表格转换为json格式的词条信息',
+        description: '将Excel表格转换为JSON格式的词条信息',
       },
       {
-        name: 'json合并',
+        name: 'JSON合并',
         value: 'jsonMerge',
-        description: '合并多个json格式的词条信息文件',
+        description: '合并多个JSON格式的词条信息文件',
       },
     ];
 

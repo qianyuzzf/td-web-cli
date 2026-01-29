@@ -23,9 +23,9 @@ type Row = (string | number | null | undefined)[];
 
 /**
  * 国际化配置类型定义
- * defaultKey: 默认语言key
- * langs: 语言映射，key为语言标识，value为语言名称数组（支持多名称匹配）
- * longCodes: 语言长代码映射，key为语言标识，value为语言长代码
+ * defaultKey: 默认语言KEY
+ * langs: 语言映射，KEY为语言标识，VALUE为语言名称数组（支持多名称匹配）
+ * longCodes: 语言长代码映射，KEY为语言标识，VALUE为语言长代码
  */
 interface I18nConfig {
   defaultKey: string;
@@ -61,11 +61,11 @@ function loadConfig(configPath: string): I18nConfig {
 }
 
 /**
- * 匹配excel表头列名对应的语言key，支持大小写不敏感匹配
- * 先匹配语言key本身，再匹配语言名称数组（包含关系）
+ * 匹配Excel表头列名对应的语言KEY，支持大小写不敏感匹配
+ * 先匹配语言KEY本身，再匹配语言名称数组（包含关系）
  * @param colName 表头列名
  * @param langs 语言映射
- * @returns 匹配到的语言key，未匹配返回null
+ * @returns 匹配到的语言KEY，未匹配返回null
  */
 function matchLangKey(
   colName: string,
@@ -74,7 +74,7 @@ function matchLangKey(
   if (!colName) return null;
   const colNameLower = colName.toLowerCase();
 
-  // 先尝试匹配语言key
+  // 先尝试匹配语言KEY
   for (const langKey of Object.keys(langs)) {
     if (langKey.toLowerCase() === colNameLower) {
       return langKey;
@@ -185,10 +185,10 @@ function parseCheckResultPerEntry(
 }
 
 /**
- * excel转json功能主函数
- * 读取用户输入的excel路径，解析内容，根据配置生成多语言json文件
+ * Excel转JSON功能主函数
+ * 读取用户输入的Excel路径，解析内容，根据配置生成多语言JSON文件
  * 并对配置文件中所有语言对应的词条进行语言检测
- * 如果有相同的json key，则在key前面加上6位编码，保证唯一性
+ * 如果有相同的JSON KEY，则在KEY前面加上6位编码，保证唯一性
  * @param program Commander命令行实例
  */
 export async function excel2json(program: Command) {
@@ -225,7 +225,7 @@ export async function excel2json(program: Command) {
     }
 
     for (const lang of languageTools) {
-      // 尝试根据语言名称匹配配置中的语言key
+      // 尝试根据语言名称匹配配置中的语言KEY
       const lowerName = lang.name.toLowerCase();
       const matchedKey =
         langNameToKey[lowerName] ||
@@ -246,15 +246,15 @@ export async function excel2json(program: Command) {
     console.warn('获取在线语言列表失败，使用本地配置 longCodes');
   }
 
-  // 交互式输入excel文件路径并校验
+  // 交互式输入Excel文件路径并校验
   const answer = await input({
-    message: '请输入excel文件路径：',
+    message: '请输入Excel文件路径：',
     validate: (value) => {
       const cleaned = value.trim().replace(/^['"]|['"]$/g, '');
       if (cleaned.length === 0) return '路径不能为空';
       if (!fs.existsSync(cleaned)) return '文件不存在，请输入有效路径';
       if (!/\.(xls|xlsx)$/i.test(cleaned))
-        return '请输入有效的excel文件路径（.xls或.xlsx）';
+        return '请输入有效的Excel文件路径（.xls或.xlsx）';
       return true;
     },
   });
@@ -266,13 +266,13 @@ export async function excel2json(program: Command) {
   );
 
   try {
-    logger.info(`开始读取excel文件：${excelPath}`, true);
+    logger.info(`开始读取Excel文件：${excelPath}`, true);
 
-    // 读取excel文件
+    // 读取Excel文件
     const workbook = XLSX.readFile(excelPath);
     const firstSheetName = workbook.SheetNames[0];
     if (!firstSheetName) {
-      logger.error('excel文件没有任何工作表，程序已退出');
+      logger.error('Excel文件没有任何工作表，程序已退出');
       console.error('程序执行时发生异常，已记录日志，程序已退出');
       process.exit(1);
     }
@@ -291,7 +291,7 @@ export async function excel2json(program: Command) {
     // 处理表头行，去除空格，转成字符串
     const headerRow = rows[0].map((cell) => (cell ? String(cell).trim() : ''));
 
-    // 根据表头匹配语言列，建立列索引到语言key的映射
+    // 根据表头匹配语言列，建立列索引到语言KEY的映射
     const colIndexToLangKey: Record<number, string> = {};
     headerRow.forEach((colName, idx) => {
       const langKey = matchLangKey(colName, i18nConfig.langs);
@@ -314,7 +314,7 @@ export async function excel2json(program: Command) {
     const defaultColNum = Number(defaultColIndex);
 
     // 初始化所有语言词条对象（包括默认语言）
-    // 用于存储最终的翻译key-value对，key可能会被重新编码以避免重复
+    // 用于存储最终的翻译KEY-VALUE对，KEY可能会被重新编码以避免重复
     const langTranslations: Record<string, Record<string, string>> = {};
     Object.values(colIndexToLangKey).forEach((langKey) => {
       langTranslations[langKey] = {};
@@ -322,15 +322,15 @@ export async function excel2json(program: Command) {
 
     logger.info('开始解析数据行', true);
 
-    // 记录所有出现过的key，检测重复，格式：langKey => Set of keys
+    // 记录所有出现过的KEY，检测重复，格式：langKey => Set of keys
     const langKeySets: Record<string, Set<string>> = {};
     Object.keys(langTranslations).forEach((langKey) => {
       langKeySets[langKey] = new Set();
     });
 
     // 遍历数据行，提取所有语言词条
-    // key统一用默认语言列的值，其他语言对应的列为翻译内容
-    const langKeysMap: Record<string, string[]> = {}; // 语言key => 词条数组（用于检测）
+    // KEY统一用默认语言列的值，其他语言对应的列为翻译内容
+    const langKeysMap: Record<string, string[]> = {}; // 语言KEY => 词条数组（用于检测）
     Object.keys(langTranslations).forEach((langKey) => {
       langKeysMap[langKey] = [];
     });
@@ -343,16 +343,16 @@ export async function excel2json(program: Command) {
       let key = String(keyCell).trim();
       key = trimQuotes(key); // 去除引号
 
-      // 跳过空key，避免写入无效数据
+      // 跳过空KEY，避免写入无效数据
       if (key.length === 0) continue;
 
-      // 判断默认语言key是否重复，若重复则重新编码
+      // 判断默认语言KEY是否重复，若重复则重新编码
       if (langKeySets[defaultLang].has(key)) {
         key = formatKey(key);
       }
       langKeySets[defaultLang].add(key);
 
-      // 默认语言的词条即key本身
+      // 默认语言的词条即KEY本身
       langTranslations[defaultLang][key] = key;
       langKeysMap[defaultLang].push(key);
 
@@ -364,7 +364,7 @@ export async function excel2json(program: Command) {
         if (valCell !== undefined && valCell !== null && valCell !== '') {
           const valStr = String(valCell);
 
-          // 判断该语言的key是否重复，若重复则重新编码key
+          // 判断该语言的KEY是否重复，若重复则重新编码KEY
           let finalKey = key;
           if (langKeySets[langKey].has(finalKey)) {
             finalKey = formatKey(finalKey);
@@ -380,7 +380,7 @@ export async function excel2json(program: Command) {
       }
     }
 
-    // 语言检测结果映射，语言key => 每条词条的错误描述数组
+    // 语言检测结果映射，语言KEY => 每条词条的错误描述数组
     const langCheckErrorsMap: Record<string, string[]> = {};
 
     // 对所有语言词条批量进行语言检测（包括默认语言）
@@ -401,7 +401,9 @@ export async function excel2json(program: Command) {
       }
 
       logger.info(
-        `开始对语言(${langKey})词条进行语言检测，词条数量：${texts.length} (${idx + 1}/${langKeysEntries.length})`,
+        `开始对语言(${langKey})词条进行语言检测，词条数量：${texts.length} (${idx + 1}/${
+          langKeysEntries.length
+        })`,
         true
       );
 
@@ -436,7 +438,7 @@ export async function excel2json(program: Command) {
       }
     }
 
-    // 输出目录：excel文件所在目录下的“lang_时间戳”文件夹
+    // 输出目录：Excel文件所在目录下的“lang_时间戳”文件夹
     const excelDir = path.dirname(excelPath);
     const timestamp = getTimestamp();
     const outputRoot = path.join(excelDir, `lang_${timestamp}`);
@@ -446,12 +448,12 @@ export async function excel2json(program: Command) {
 
     logger.info(`开始生成语言文件，输出目录：${outputRoot}`, true);
 
-    // 按语言生成对应的json文件，默认语言的key=value不生成文件
+    // 按语言生成对应的JSON文件，默认语言的KEY=VALUE不生成文件
     for (const [langKey, translations] of Object.entries(langTranslations)) {
       if (Object.keys(translations).length === 0) continue;
 
       if (langKey === defaultLang) {
-        logger.info(`跳过默认语言(${langKey})的json文件生成`, true);
+        logger.info(`跳过默认语言(${langKey})的JSON文件生成`, true);
         continue; // 跳过默认语言文件生成
       }
 
@@ -467,24 +469,24 @@ export async function excel2json(program: Command) {
       logger.info(`已生成语言文件：${filePath}`, true);
     }
 
-    // 生成语言检测结果excel文件
-    logger.info('开始生成语言检测结果excel文件', true);
+    // 生成语言检测结果Excel文件
+    logger.info('开始生成语言检测结果Excel文件', true);
 
-    // 构造检测结果excel的表头：默认语言列 + 其他语言列（对应原文列名）
-    // 这里表头用原excel的表头中对应语言列的值
+    // 构造检测结果Excel的表头：默认语言列 + 其他语言列（对应原文列名）
+    // 这里表头用原Excel的表头中对应语言列的值
     const errorSheetHeader: string[] = [];
 
-    // 按列索引顺序遍历，匹配语言key，构造表头
+    // 按列索引顺序遍历，匹配语言KEY，构造表头
     Object.entries(colIndexToLangKey)
       .sort((a, b) => Number(a[0]) - Number(b[0]))
       .forEach(([colIdxStr, langKey]) => {
         const colIdx = Number(colIdxStr);
-        // 表头为原excel表头中对应列的文字
+        // 表头为原Excel表头中对应列的文字
         errorSheetHeader.push(headerRow[colIdx]);
       });
 
-    // 构造检测结果excel的内容，每一列对应语言检测错误描述
-    // 每行对应原excel中一条数据行
+    // 构造检测结果Excel的内容，每一列对应语言检测错误描述
+    // 每行对应原Excel中一条数据行
     const dataRowCount = rows.length - 1;
     const errorSheetData: (string | null)[][] = [errorSheetHeader];
 
@@ -508,7 +510,7 @@ export async function excel2json(program: Command) {
       errorSheetData.push(rowErrors);
     }
 
-    // 生成excel工作簿和工作表
+    // 生成Excel工作簿和工作表
     const errorWorkbook = XLSX.utils.book_new();
     const errorSheet = XLSX.utils.aoa_to_sheet(errorSheetData);
     XLSX.utils.book_append_sheet(
@@ -517,11 +519,11 @@ export async function excel2json(program: Command) {
       'LanguageCheckResults'
     );
 
-    // 写入检测结果excel文件，固定文件名 lang_check_results.xlsx
+    // 写入检测结果Excel文件，固定文件名 lang_check_results.xlsx
     const errorExcelPath = path.join(outputRoot, `lang_check_results.xlsx`);
     XLSX.writeFile(errorWorkbook, errorExcelPath);
 
-    logger.info(`语言检测结果excel文件已生成：${errorExcelPath}`, true);
+    logger.info(`语言检测结果Excel文件已生成：${errorExcelPath}`, true);
 
     // 最终完成提示，包含输出目录
     logger.info(`全部转换完成，语言文件输出目录：${outputRoot}`, true);

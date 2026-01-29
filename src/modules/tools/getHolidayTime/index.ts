@@ -35,9 +35,11 @@ function getNearestHolidays(
   const today = new Date();
 
   // 过滤出所有节假日和调休日
-  const holidays = data.dates.filter((d) => d.type === 'public_holiday');
+  const holidays = data.dates.filter(
+    (d) => d.type.toLowerCase() === 'public_holiday'
+  );
   const transferWorkdays = data.dates.filter(
-    (d) => d.type === 'transfer_workday'
+    (d) => d.type.toLowerCase() === 'transfer_workday'
   );
 
   // 解析日期字符串为Date对象，确保时区正确

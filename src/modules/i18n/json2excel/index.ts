@@ -1,3 +1,3 @@
 export function run() {
-  console.log('json转excel');
+  console.log('JSON转Excel');
 }

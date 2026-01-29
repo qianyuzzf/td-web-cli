@@ -1,3 +1,3 @@
 export function run() {
-  console.log('json合并');
+  console.log('JSON合并');
 }
