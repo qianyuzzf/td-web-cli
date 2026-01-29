@@ -76,7 +76,7 @@ td-web-cli
 ### 功能说明
 
 - 多语言 Excel 转 JSON 工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/excel2json.md)
-- 获取假期时间工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/getHolidayTime.md)
+- 获取假期时间工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/tools/getHolidayTime.md)
 
 ---
 
