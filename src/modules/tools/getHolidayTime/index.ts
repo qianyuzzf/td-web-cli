@@ -108,8 +108,8 @@ function getNearestHolidays(
     const relatedTransfers = transferWorkdays.filter((t) => {
       const td = parseDate(t.date);
       return (
-        Math.abs(td.getTime() - start.getTime()) <= 7 * 24 * 60 * 60 * 1000 ||
-        Math.abs(td.getTime() - end.getTime()) <= 7 * 24 * 60 * 60 * 1000
+        td.getTime() >= start.getTime() - 7 * 24 * 60 * 60 * 1000 &&
+        td.getTime() <= end.getTime() + 7 * 24 * 60 * 60 * 1000
       );
     });
 
@@ -124,8 +124,28 @@ function getNearestHolidays(
 }
 
 /**
+ * 根据最近节假日的最短剩余天数，打印对应文案和表情
+ * @param minDays 最近节假日剩余最少天数
+ */
+function printHolidayMessage(minDays: number) {
+  if (minDays <= 10) {
+    console.log(
+      '\x1b[33m%s\x1b[0m',
+      '🎉 好开心！假期马上就到了，放松一下吧！🎉'
+    );
+  } else if (minDays <= 30) {
+    console.log('\x1b[36m%s\x1b[0m', '🙏 祈祷时间过得快点，假期早点来临！🙏');
+  } else {
+    console.log(
+      '\x1b[31m%s\x1b[0m',
+      '😞 距离假期还很远，继续加油，坚持就是胜利！😞'
+    );
+  }
+}
+
+/**
  * 获取节假日信息并打印最近三个节假日详情，节假日名称黄色，序号无颜色
- * 并打印请求和处理进度提示
+ * 并打印请求和处理进度提示，最后根据最近节假日剩余天数打印文案
  */
 export async function getHolidayTime() {
   try {
@@ -155,6 +175,14 @@ export async function getHolidayTime() {
       }
       console.log('\x1b[90m---------------------\x1b[0m'); // 灰色分割线
     });
+
+    // 找到最近节假日的最小剩余天数，打印对应文案
+    if (nearest.length > 0) {
+      const minDays = Math.min(...nearest.map((h) => h.daysUntil));
+      printHolidayMessage(minDays);
+    } else {
+      console.log('\x1b[37m暂无未来节假日信息。\x1b[0m');
+    }
 
     logger.info('节假日信息打印完成。', true);
   } catch (error: unknown) {
