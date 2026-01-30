@@ -19,7 +19,24 @@
   "engines": {
     "node": ">=20"
   },
-  "keywords": [],
+  "keywords": [
+    "td-web-cli",
+    "cli",
+    "i18n",
+    "国际化",
+    "tools",
+    "小工具",
+    "extractEntry",
+    "提取词条",
+    "json2excel",
+    "JSON转Excel",
+    "excel2json",
+    "Excel转JSON",
+    "jsonMerge",
+    "JSON合并",
+    "getHolidayTime",
+    "获取假期时间"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
