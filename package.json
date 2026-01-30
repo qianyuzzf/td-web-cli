@@ -9,8 +9,7 @@
   },
   "files": [
     "dist",
-    "setting.json",
-    "docs/**/*.md"
+    "setting.json"
   ],
   "scripts": {
     "build": "tsc",
