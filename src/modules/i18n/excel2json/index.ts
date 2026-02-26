@@ -109,6 +109,25 @@ function trimQuotes(str: string): string {
 }
 
 /**
+ * 将Git Bash风格的路径（如 /d/...）转换成Windows风格路径（D:/...）
+ * @param inputPath 用户输入的路径
+ * @returns 转换后的绝对路径
+ */
+function normalizeGitBashPath(inputPath: string): string {
+  let cleaned = inputPath.trim().replace(/^['"]|['"]$/g, '');
+
+  // 如果路径是 /d/... 格式，转换成 D:/...
+  if (/^\/[a-zA-Z]\//.test(cleaned)) {
+    cleaned = cleaned.replace(/^\/([a-zA-Z])\//, '$1:/');
+  }
+
+  // 使用 path.resolve 转成绝对路径（相对于当前工作目录）
+  const absolutePath = path.resolve(process.cwd(), cleaned);
+
+  return absolutePath;
+}
+
+/**
  * 批量检测词条文本，返回所有检测结果
  * @param texts 词条数组
  * @param language 语言代码
@@ -252,18 +271,19 @@ export async function excel2json(program: Command) {
     validate: (value) => {
       const cleaned = value.trim().replace(/^['"]|['"]$/g, '');
       if (cleaned.length === 0) return '路径不能为空';
-      if (!fs.existsSync(cleaned)) return '文件不存在，请输入有效路径';
-      if (!/\.(xls|xlsx)$/i.test(cleaned))
+
+      // 这里调用路径转换确保校验时路径正确
+      const normalizedPath = normalizeGitBashPath(cleaned);
+
+      if (!fs.existsSync(normalizedPath)) return '文件不存在，请输入有效路径';
+      if (!/\.(xls|xlsx)$/i.test(normalizedPath))
         return '请输入有效的Excel文件路径（.xls或.xlsx）';
       return true;
     },
   });
 
   // 规范化路径，支持相对路径转绝对路径，去除首尾引号
-  const excelPath = path.resolve(
-    process.cwd(),
-    answer.trim().replace(/^['"]|['"]$/g, '')
-  );
+  const excelPath = normalizeGitBashPath(answer);
 
   try {
     logger.info(`开始读取Excel文件：${excelPath}`, true);
