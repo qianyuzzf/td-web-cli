@@ -13,6 +13,8 @@ import {
   languageToolCheck,
   getLanguageTool,
   formatKey,
+  normalizeGitBashPath,
+  trimQuotes,
 } from '../../../utils/index.js';
 
 // 获取当前文件目录
@@ -71,7 +73,9 @@ function matchLangKey(
   colName: string,
   langs: Record<string, string[]>
 ): string | null {
-  if (!colName) return null;
+  if (!colName) {
+    return null;
+  }
   const colNameLower = colName.toLowerCase();
 
   // 先尝试匹配语言KEY
@@ -91,40 +95,6 @@ function matchLangKey(
   }
 
   return null;
-}
-
-/**
- * 去除字符串首尾的单引号或双引号
- * @param str 输入字符串
- * @returns 去除引号后的字符串
- */
-function trimQuotes(str: string): string {
-  if (
-    (str.startsWith('"') && str.endsWith('"')) ||
-    (str.startsWith("'") && str.endsWith("'"))
-  ) {
-    return str.slice(1, -1);
-  }
-  return str;
-}
-
-/**
- * 将Git Bash风格的路径（如 /d/...）转换成Windows风格路径（D:/...）
- * @param inputPath 用户输入的路径
- * @returns 转换后的绝对路径
- */
-function normalizeGitBashPath(inputPath: string): string {
-  let cleaned = inputPath.trim().replace(/^['"]|['"]$/g, '');
-
-  // 如果路径是 /d/... 格式，转换成 D:/...
-  if (/^\/[a-zA-Z]\//.test(cleaned)) {
-    cleaned = cleaned.replace(/^\/([a-zA-Z])\//, '$1:/');
-  }
-
-  // 使用 path.resolve 转成绝对路径（相对于当前工作目录）
-  const absolutePath = path.resolve(process.cwd(), cleaned);
-
-  return absolutePath;
 }
 
 /**
@@ -185,7 +155,9 @@ function parseCheckResultPerEntry(
     const idx = positions.findIndex(
       (range) => errorOffset >= range.start && errorOffset < range.end
     );
-    if (idx === -1) continue;
+    if (idx === -1) {
+      continue;
+    }
 
     // 生成错误信息字符串
     const errMsg = `错误: ${match.message}\n出错句子: ${match.sentence}\n建议替换: ${match.replacements
@@ -270,14 +242,20 @@ export async function excel2json(program: Command) {
     message: '请输入Excel文件路径：',
     validate: (value) => {
       const cleaned = value.trim().replace(/^['"]|['"]$/g, '');
-      if (cleaned.length === 0) return '路径不能为空';
+      if (cleaned.length === 0) {
+        return '路径不能为空';
+      }
 
       // 这里调用路径转换确保校验时路径正确
       const normalizedPath = normalizeGitBashPath(cleaned);
 
-      if (!fs.existsSync(normalizedPath)) return '文件不存在，请输入有效路径';
-      if (!/\.(xls|xlsx)$/i.test(normalizedPath))
+      if (!fs.existsSync(normalizedPath)) {
+        return '文件不存在，请输入有效路径';
+      }
+      if (!/\.(xls|xlsx)$/i.test(normalizedPath)) {
         return '请输入有效的Excel文件路径（.xls或.xlsx）';
+      }
+
       return true;
     },
   });
@@ -358,13 +336,17 @@ export async function excel2json(program: Command) {
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       let keyCell = row[defaultColNum];
-      if (keyCell === undefined || keyCell === null || keyCell === '') continue;
+      if (keyCell === undefined || keyCell === null || keyCell === '') {
+        continue;
+      }
 
       let key = String(keyCell).trim();
       key = trimQuotes(key); // 去除引号
 
       // 跳过空KEY，避免写入无效数据
-      if (key.length === 0) continue;
+      if (key.length === 0) {
+        continue;
+      }
 
       // 判断默认语言KEY是否重复，若重复则重新编码
       if (langKeySets[defaultLang].has(key)) {
@@ -379,7 +361,9 @@ export async function excel2json(program: Command) {
       // 其他语言词条
       for (const [colIdxStr, langKey] of Object.entries(colIndexToLangKey)) {
         const colIdx = Number(colIdxStr);
-        if (langKey === defaultLang) continue;
+        if (langKey === defaultLang) {
+          continue;
+        }
         const valCell = row[colIdx];
         if (valCell !== undefined && valCell !== null && valCell !== '') {
           const valStr = String(valCell);
@@ -470,7 +454,9 @@ export async function excel2json(program: Command) {
 
     // 按语言生成对应的JSON文件，默认语言的KEY=VALUE不生成文件
     for (const [langKey, translations] of Object.entries(langTranslations)) {
-      if (Object.keys(translations).length === 0) continue;
+      if (Object.keys(translations).length === 0) {
+        continue;
+      }
 
       if (langKey === defaultLang) {
         logger.info(`跳过默认语言(${langKey})的JSON文件生成`, true);

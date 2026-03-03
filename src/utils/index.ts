@@ -408,3 +408,37 @@ export function decodeKey(key: string): string {
   // 去除前缀
   return key.replace(prefixRegex, '');
 }
+
+/**
+ * 将Git Bash风格的路径（如 /d/...）转换成Windows风格路径（D:/...）
+ * @param inputPath 用户输入的路径
+ * @returns 转换后的绝对路径
+ */
+export function normalizeGitBashPath(inputPath: string): string {
+  let cleaned = inputPath.trim().replace(/^['"]|['"]$/g, '');
+
+  // 如果路径是 /d/... 格式，转换成 D:/...
+  if (/^\/[a-zA-Z]\//.test(cleaned)) {
+    cleaned = cleaned.replace(/^\/([a-zA-Z])\//, '$1:/');
+  }
+
+  // 使用 path.resolve 转成绝对路径（相对于当前工作目录）
+  const absolutePath = path.resolve(process.cwd(), cleaned);
+
+  return absolutePath;
+}
+
+/**
+ * 去除字符串首尾的单引号或双引号
+ * @param str 输入字符串
+ * @returns 去除引号后的字符串
+ */
+export function trimQuotes(str: string): string {
+  if (
+    (str.startsWith('"') && str.endsWith('"')) ||
+    (str.startsWith("'") && str.endsWith("'"))
+  ) {
+    return str.slice(1, -1);
+  }
+  return str;
+}

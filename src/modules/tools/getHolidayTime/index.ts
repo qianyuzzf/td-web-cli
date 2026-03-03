@@ -65,7 +65,7 @@ function getNearestHolidays(
       // 初始化第一个节日组
       currentGroup = {
         name: h.name,
-        daysUntil: Math.floor(
+        daysUntil: Math.ceil(
           (hd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
         ),
         holidayDates: [h.date],
@@ -86,7 +86,7 @@ function getNearestHolidays(
         grouped.push(currentGroup);
         currentGroup = {
           name: h.name,
-          daysUntil: Math.floor(
+          daysUntil: Math.ceil(
             (hd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
           ),
           holidayDates: [h.date],

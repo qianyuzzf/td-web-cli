@@ -16,9 +16,13 @@ function logStep(msg) {
 // 版本号自增，默认增加 patch 版本，如 1.2.3 -> 1.2.4
 function incrementVersion(version) {
   const parts = version.split(".");
-  if (parts.length !== 3) return null;
+  if (parts.length !== 3) {
+    return null;
+  }
   const patch = parseInt(parts[2], 10);
-  if (isNaN(patch)) return null;
+  if (isNaN(patch)) {
+    return null;
+  }
   parts[2] = (patch + 1).toString();
   return parts.join(".");
 }
@@ -28,8 +32,12 @@ function compareVersions(v1, v2) {
   const p1 = v1.split(".").map(Number);
   const p2 = v2.split(".").map(Number);
   for (let i = 0; i < 3; i++) {
-    if (p1[i] > p2[i]) return 1;
-    if (p1[i] < p2[i]) return -1;
+    if (p1[i] > p2[i]) {
+      return 1;
+    }
+    if (p1[i] < p2[i]) {
+      return -1;
+    }
   }
   return 0;
 }
@@ -40,10 +48,14 @@ async function main() {
     const pkgRaw = readFileSync("package.json", "utf-8");
     const pkg = JSON.parse(pkgRaw);
     const currentVersion = pkg.version;
-    if (!currentVersion) exitWithError("package.json 中没有找到 version 字段");
+    if (!currentVersion) {
+      exitWithError("package.json 中没有找到 version 字段");
+    }
 
     const defaultVersion = incrementVersion(currentVersion);
-    if (!defaultVersion) exitWithError(`无法解析当前版本号：${currentVersion}`);
+    if (!defaultVersion) {
+      exitWithError(`无法解析当前版本号：${currentVersion}`);
+    }
 
     logStep(`当前版本号：${currentVersion}`);
     logStep(`默认新版本号：${defaultVersion}`);
