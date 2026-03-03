@@ -200,19 +200,20 @@ export async function jsonMerge(program: Command) {
       );
 
       if (commonJsonFiles.length === 0) {
-        logger.info(`语言【${langKey}】下没有共同的JSON文件，跳过`);
+        logger.info(`语言【${langKey}】下没有共同的JSON文件，跳过`, true);
         continue;
       }
 
       logger.info(
         `发现 ${commonJsonFiles.length} 个共同JSON文件: ${commonJsonFiles.join(
           ', '
-        )}`
+        )}`,
+        true
       );
 
       // 逐个文件合并
       for (const jsonFile of commonJsonFiles) {
-        logger.info(`处理文件: ${jsonFile}`);
+        logger.info(`处理文件: ${jsonFile}`, true);
 
         const srcFile = path.join(srcLangPath, jsonFile);
         const mergeFile = path.join(mergeLangPath, jsonFile);
@@ -231,11 +232,22 @@ export async function jsonMerge(program: Command) {
         const srcJson = readJsonFile(srcFile);
         const mergeJson = readJsonFile(mergeFile);
 
+        // 打印合并前后键数量
+        const srcKeyCount = Object.keys(srcJson).length;
+        const mergeKeyCount = Object.keys(mergeJson).length;
+        logger.info(
+          `源文件键数: ${srcKeyCount}, 合并文件键数: ${mergeKeyCount}`,
+          true
+        );
+
         const merged = await mergeJsonObjects(srcJson, mergeJson, langKey);
+
+        const finalKeyCount = Object.keys(merged).length;
+        logger.info(`合并后键数: ${finalKeyCount}`, true);
 
         writeJsonFile(srcFile, merged);
 
-        logger.info(`文件 ${jsonFile} 合并完成`);
+        logger.info(`文件 ${jsonFile} 合并完成`, true);
       }
 
       logger.info(`语言【${langKey}】全部处理完成`, true);
