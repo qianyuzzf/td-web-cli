@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { select, Separator } from '@inquirer/prompts';
 import { logger, loggerError } from '../../utils/index.js';
 import { excel2json } from './excel2json/index.js';
+import { json2excel } from './json2excel/index.js';
 import { jsonMerge } from './jsonMerge/index.js';
 
 /**
@@ -64,6 +65,11 @@ export async function i18n(program: Command) {
       case 'excel2json':
         logger.info(`${selectedModule.name}功能开始执行`);
         await excel2json(program);
+        logger.info(`${selectedModule.name}功能执行完成`);
+        break;
+      case 'json2excel':
+        logger.info(`${selectedModule.name}功能开始执行`);
+        await json2excel(program);
         logger.info(`${selectedModule.name}功能执行完成`);
         break;
       case 'jsonMerge':
