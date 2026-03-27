@@ -40,9 +40,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@babel/parser": "^7.29.2",
+    "@babel/traverse": "^7.29.0",
     "@inquirer/prompts": "^8.2.0",
+    "@vue/compiler-sfc": "^3.5.30",
     "axios": "^1.13.3",
     "commander": "^14.0.2",
+    "minimatch": "^10.2.4",
+    "node-html-parser": "^7.1.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

@@ -47,7 +47,6 @@ async function main() {
         new Separator(), // 分割线，便于未来扩展更多模块
       ],
       default: 'i18n', // 默认选项
-      pageSize: 10, // 最大显示选项数
       loop: true, // 选项循环滚动
     });
 

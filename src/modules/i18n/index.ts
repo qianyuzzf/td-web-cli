@@ -4,6 +4,7 @@ import { logger, loggerError } from '../../utils/index.js';
 import { excel2json } from './excel2json/index.js';
 import { json2excel } from './json2excel/index.js';
 import { jsonMerge } from './jsonMerge/index.js';
+import { extractEntry } from './extractEntry/index.js';
 
 /**
  * 国际化模块主入口
@@ -46,7 +47,6 @@ export async function i18n(program: Command) {
         new Separator(), // 分割线，方便未来扩展更多功能
       ],
       default: 'extractEntry', // 默认选项
-      pageSize: 10, // 最大显示选项数
       loop: true, // 是否循环滚动选项
     });
 
@@ -62,6 +62,11 @@ export async function i18n(program: Command) {
 
     // 根据选择执行对应功能
     switch (answer) {
+      case 'extractEntry':
+        logger.info(`${selectedModule.name}功能开始执行`);
+        await extractEntry(program);
+        logger.info(`${selectedModule.name}功能执行完成`);
+        break;
       case 'excel2json':
         logger.info(`${selectedModule.name}功能开始执行`);
         await excel2json(program);

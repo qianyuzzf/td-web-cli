@@ -29,7 +29,6 @@ export async function tools(program: Command) {
         new Separator(), // 分割线，方便未来扩展更多功能
       ],
       default: 'getHolidayTime', // 默认选项
-      pageSize: 10, // 最大显示选项数
       loop: true, // 是否循环滚动选项
     });
 

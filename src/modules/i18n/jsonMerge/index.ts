@@ -70,7 +70,6 @@ async function mergeJsonObjects(
           new Separator(),
         ],
         default: 'base',
-        pageSize: 10,
         loop: true,
       });
 
