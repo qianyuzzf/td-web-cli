@@ -300,7 +300,7 @@ function getFiles(
     const fullPath = path.join(dir, item);
     const stat = fs.statSync(fullPath);
     // 计算相对于根目录的路径，用于匹配忽略模式
-    const relativePath = path.relative(rootDir, fullPath);
+    const relativePath = path.relative(rootDir, fullPath).replace(/\\/g, '/');
 
     if (stat.isDirectory()) {
       // 检查目录是否匹配任何忽略模式
@@ -328,6 +328,19 @@ function getFiles(
     }
   }
   return results;
+}
+
+/**
+ * 验证 glob 模式是否有效
+ */
+function isValidGlobPattern(pattern: string): boolean {
+  try {
+    // 使用 minimatch 尝试创建正则表达式，如果模式无效会抛出异常
+    minimatch.makeRe(pattern, { dot: true });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -374,12 +387,13 @@ export async function extractEntry(program: Command) {
     '.git',
     'dist',
     'build',
-    'dist/**',
-    'build/**',
+    'src/components/protocol',
+    'src/phone-repeater',
+    'src/phone/src/plugins',
   ];
   const useDefault = await confirm({
     message:
-      '是否使用默认忽略模式？默认模式会忽略 node_modules, .git, dist, build 及其所有子目录',
+      '是否使用默认忽略模式？默认模式会忽略 node_modules, .git, dist, build, src/components/protocol, src/phone-repeater, src/phone/src/plugins 及其所有子目录',
     default: true,
   });
 
@@ -389,12 +403,34 @@ export async function extractEntry(program: Command) {
       message:
         '请输入自定义忽略模式，多个模式用英文逗号分隔。支持 glob 通配符，可忽略目录或文件。\n（直接回车表示不忽略任何内容）\n示例：node_modules,dist/**,build/**,*.log,config.js',
       validate: (value) => {
-        // 允许空字符串，表示不忽略任何内容
+        // 将输入中的反斜杠统一替换为正斜杠
+        const normalizedValue = value.replace(/\\/g, '/');
+        const trimmed = normalizedValue.trim();
+        // 空字符串表示不忽略，直接通过
+        if (!trimmed) {
+          return true;
+        }
+        // 分割并过滤空字符串
+        const patterns = trimmed
+          .split(',')
+          .map((p) => p.trim())
+          .filter((p) => p);
+        if (patterns.length === 0) {
+          return true; // 实际上已经过滤，但保留空处理
+        }
+        // 校验每个模式的有效性
+        for (const pattern of patterns) {
+          if (!isValidGlobPattern(pattern)) {
+            return `无效的 glob 模式："${pattern}"，请使用正确的通配符格式。`;
+          }
+        }
         return true;
       },
     });
-    if (customInput.trim()) {
-      const patterns = customInput
+    // 将用户输入中的反斜杠统一替换为正斜杠，确保模式统一
+    const normalizedCustomInput = customInput.replace(/\\/g, '/');
+    if (normalizedCustomInput.trim()) {
+      const patterns = normalizedCustomInput
         .split(',')
         .map((p) => p.trim())
         .filter((p) => p);
@@ -444,7 +480,7 @@ export async function extractEntry(program: Command) {
         const content = fs.readFileSync(file, 'utf-8');
         const strings = extractEntryFromFile(file, content);
         if (strings.size > 0) {
-          const relativePath = path.relative(rootDir, file);
+          const relativePath = path.relative(rootDir, file).replace(/\\/g, '/');
           const terms = Array.from(strings).sort();
           fileToTermsMap.set(relativePath, terms);
         }
