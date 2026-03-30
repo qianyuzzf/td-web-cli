@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { input, select, confirm, Separator } from '@inquirer/prompts';
+import { input, confirm } from '@inquirer/prompts';
 import XLSX from 'xlsx';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -33,39 +33,12 @@ const SUPPORTED_EXTENSIONS = [
   '.htm',
 ];
 
-// 国际化配置接口
-interface I18nConfig {
-  defaultKey: string;
-  langs: Record<string, string[]>;
-}
-
 /**
  * 检查字符串是否包含汉字（使用 Unicode 属性转义，匹配所有汉字）
  */
 function containsChinese(text: string): boolean {
   const hanRegex = /\p{Script=Han}/u;
   return hanRegex.test(text);
-}
-
-/**
- * 读取并解析配置文件
- */
-function loadConfig(configPath: string): I18nConfig {
-  if (!fs.existsSync(configPath)) {
-    throw new Error(`配置文件不存在：${configPath}`);
-  }
-  const content = fs.readFileSync(configPath, { encoding: 'utf-8' });
-  const json = JSON.parse(content);
-  if (!json.i18n) {
-    throw new Error('配置文件格式错误，缺少i18n');
-  }
-  if (!json.i18n.defaultKey) {
-    throw new Error('配置文件格式错误，缺少i18n.defaultKey');
-  }
-  if (!json.i18n.langs) {
-    throw new Error('配置文件格式错误，缺少i18n.langs');
-  }
-  return json.i18n;
 }
 
 /**
@@ -357,22 +330,10 @@ function isValidGlobPattern(pattern: string): boolean {
 }
 
 /**
- * 提取前端项目词条主函数
+ * 提取前端项目词条主函数（固定简体中文）
  */
 export async function extractEntry(program: Command) {
   const configPath = path.join(__dirname, '../../../../setting.json');
-  let i18nConfig: I18nConfig;
-
-  try {
-    logger.info(`开始加载配置文件：${configPath}`, true);
-    i18nConfig = loadConfig(configPath);
-    logger.info('配置文件加载成功', true);
-  } catch (error: unknown) {
-    const msg = `读取配置文件失败：${normalizeError(error).stack}，程序已退出`;
-    logger.error(msg);
-    console.error('程序执行时发生异常，已记录日志，程序已退出');
-    process.exit(1);
-  }
 
   // 1. 输入项目根目录
   const answer = await input({
@@ -460,23 +421,8 @@ export async function extractEntry(program: Command) {
     logger.info(`使用默认忽略模式：${defaultPatterns.join(', ')}`, true);
   }
 
-  // 3. 选择目标语言
-  const langChoices = Object.entries(i18nConfig.langs).map(([key, names]) => ({
-    name: names[0],
-    value: key,
-  }));
-
-  const selectedLangKey = await select({
-    message: '请选择需要提取的目标语言（将生成该语言对应的翻译列）',
-    choices: [
-      ...langChoices,
-      new Separator(), // 分割线，方便未来扩展更多功能
-    ],
-    default: i18nConfig.defaultKey,
-    loop: true, // 是否循环滚动选项
-  });
-  const targetLangName =
-    i18nConfig.langs[selectedLangKey]?.[0] || selectedLangKey;
+  // 固定目标语言为简体中文
+  const targetLangName = '简体中文';
 
   try {
     logger.info(`开始扫描目录：${rootDir}`, true);
