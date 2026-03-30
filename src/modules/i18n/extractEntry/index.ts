@@ -92,6 +92,7 @@ function extractStringsFromExpression(expr: string): Set<string> {
 
 /**
  * 使用 Babel AST 从 JavaScript/TypeScript/JSX 代码中提取包含中文的字符串
+ * 注意：Babel 解析时会自动忽略注释，因此注释中的中文不会被提取
  */
 function extractFromJS(code: string): Set<string> {
   const strings = new Set<string>();
@@ -140,7 +141,7 @@ function extractFromVue(content: string): Set<string> {
   const strings = new Set<string>();
   const { descriptor } = vueParse(content);
 
-  // 处理 script 部分
+  // 处理 script 部分（注释已被 Babel 解析忽略）
   if (descriptor.script || descriptor.scriptSetup) {
     const scriptContent =
       descriptor.script?.content || descriptor.scriptSetup?.content || '';
@@ -158,7 +159,9 @@ function extractFromVue(content: string): Set<string> {
 
   // 处理 template 部分
   if (descriptor.template) {
-    const templateContent = descriptor.template.content;
+    // 移除 HTML 注释，避免提取注释中的中文
+    let templateContent = descriptor.template.content;
+    templateContent = templateContent.replace(/<!--[\s\S]*?-->/g, '');
 
     // 1. 提取文本节点中的中文
     const textRegex = />([^<]+)</g;
@@ -209,6 +212,7 @@ function extractFromVue(content: string): Set<string> {
 
 /**
  * 使用 node-html-parser 解析 HTML 文件
+ * 注意：HTML 注释节点（nodeType 8）会被自动忽略，因此注释中的中文不会被提取
  */
 function extractFromHTML(html: string): Set<string> {
   const strings = new Set<string>();
@@ -262,6 +266,7 @@ function extractFromHTML(html: string): Set<string> {
         node.childNodes.forEach((child: any) => walk(child));
       }
     }
+    // 注释节点（nodeType 8）不处理，直接忽略
   }
 
   walk(root);
