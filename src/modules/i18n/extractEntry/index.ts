@@ -100,7 +100,7 @@ function extractFromJS(code: string): Set<string> {
     plugins: ['jsx', 'typescript'],
   });
 
-  traverse(ast, {
+  traverse.default(ast, {
     StringLiteral(path: any) {
       const text = path.node.value;
       if (text && containsChinese(text)) {
@@ -216,26 +216,34 @@ function extractFromHTML(html: string): Set<string> {
 
   function walk(node: any) {
     if (node.nodeType === 3) {
-      const text = node.text.trim();
-      if (text && containsChinese(text)) {
-        strings.add(text);
+      // 文本节点
+      const text = node.text;
+      if (text && typeof text === 'string') {
+        const trimmed = text.trim();
+        if (trimmed && containsChinese(trimmed)) {
+          strings.add(trimmed);
+        }
       }
     } else if (node.nodeType === 1) {
-      const tagName = node.tagName.toLowerCase();
-      if (tagName === 'script') {
-        const scriptContent = node.text;
-        if (scriptContent) {
-          try {
-            const scriptStrings = extractFromJS(scriptContent);
-            scriptStrings.forEach((s) => strings.add(s));
-          } catch (err) {
-            logger.warn(`解析内联脚本失败: ${normalizeError(err).message}`);
+      // 元素节点
+      const tagName = node.tagName;
+      if (tagName && typeof tagName === 'string') {
+        const lowerTag = tagName.toLowerCase();
+        if (lowerTag === 'script') {
+          const scriptContent = node.text;
+          if (scriptContent && typeof scriptContent === 'string') {
+            try {
+              const scriptStrings = extractFromJS(scriptContent);
+              scriptStrings.forEach((s) => strings.add(s));
+            } catch (err) {
+              logger.warn(`解析内联脚本失败: ${normalizeError(err).message}`);
+            }
           }
+          return;
         }
-        return;
-      }
-      if (tagName === 'style') {
-        return;
+        if (lowerTag === 'style') {
+          return;
+        }
       }
 
       if (node.attributes) {
@@ -387,13 +395,16 @@ export async function extractEntry(program: Command) {
     '.git',
     'dist',
     'build',
+    'public',
     'src/components/protocol',
     'src/phone-repeater',
     'src/phone/src/plugins',
+    'src/assets/lang',
+    'build-all.js',
   ];
   const useDefault = await confirm({
     message:
-      '是否使用默认忽略模式？默认模式会忽略 node_modules, .git, dist, build, src/components/protocol, src/phone-repeater, src/phone/src/plugins 及其所有子目录',
+      '是否使用默认忽略模式？默认模式会忽略 node_modules, .git, dist, build, public, src/components/protocol, src/phone-repeater, src/phone/src/plugins, src/assets/lang, build-all.js 及其所有子目录',
     default: true,
   });
 
