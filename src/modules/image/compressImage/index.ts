@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { input, select, Separator } from '@inquirer/prompts';
+import { input, select, confirm, Separator } from '@inquirer/prompts';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
@@ -42,6 +42,7 @@ function getOutputPath(inputPath: string): string {
  * 图片压缩主功能
  * - 交互式输入图片路径
  * - 选择压缩级别（无损/视觉无损/有损/高损）
+ * - 询问是否自动缩放超大图片
  * - 自动识别格式并使用对应压缩参数
  * - 输出文件添加6位随机后缀，保存在原目录
  */
@@ -106,6 +107,12 @@ export async function compressImage(program: Command) {
     loop: true, // 是否循环滚动选项
   });
 
+  // 询问是否自动缩放超大图片
+  const shouldResize = await confirm({
+    message: '是否自动缩放超大图片（宽度超过 2560px 时缩小至 2560px）？',
+    default: true,
+  });
+
   try {
     logger.info(
       `开始处理图片：${imagePath}，压缩级别：${moduleChoices.find((item) => item.value === compressType)?.name}`,
@@ -126,18 +133,29 @@ export async function compressImage(program: Command) {
       true
     );
 
-    // 可选：若图片尺寸过大，自动缩放到合理宽度（进一步提升压缩率）
-    const MAX_WIDTH = 2560; // 可根据需要调整
+    // 初始化处理管道
     let pipeline = image;
-    if (metadata.width && metadata.width > MAX_WIDTH) {
-      pipeline = pipeline.resize(MAX_WIDTH, null, {
-        withoutEnlargement: true,
-        fit: 'inside',
-      });
-      logger.info(
-        `图片尺寸已从 ${metadata.width}px 缩小至 ${MAX_WIDTH}px`,
-        true
-      );
+
+    // 自动缩放逻辑（用户同意且图片宽度超出阈值）
+    const MAX_WIDTH = 2560;
+    if (shouldResize && metadata.width && metadata.width > MAX_WIDTH) {
+      // 防御性检查：确保 width 是有效正数
+      if (metadata.width > 0 && metadata.width < 100000) {
+        pipeline = pipeline.resize(MAX_WIDTH, null, {
+          withoutEnlargement: true,
+          fit: 'inside',
+        });
+        logger.info(
+          `图片尺寸已从 ${metadata.width}px 缩小至 ${MAX_WIDTH}px`,
+          true
+        );
+      } else {
+        logger.warn(`图片宽度异常 (${metadata.width})，跳过尺寸调整`, true);
+      }
+    } else if (shouldResize) {
+      logger.info(`图片宽度未超过 ${MAX_WIDTH}px，无需缩放`, true);
+    } else {
+      logger.info('已跳过自动缩放', true);
     }
 
     // 根据格式和压缩类型构建处理管道
