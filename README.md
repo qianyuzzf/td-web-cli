@@ -43,8 +43,12 @@ td-web-cli
 
 ### 功能说明
 
-- 多语言 Excel 转 JSON 工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/excel2json.md)
-- 节假日查询工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/tools/getHolidayTime.md)
+- 前端项目中文词条提取工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/extractEntry.md)
+- 多语言 JSON 转 Excel 工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/json2excel.md)
+- 多语言 Excel 转 JSON 及语言检测工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/excel2json.md)
+- 多语言 JSON 文件合并工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/jsonMerge.md)
+- 图片压缩工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/compressImage.md)
+- 节假日查询与提醒工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/tools/getHolidayTime.md)
 
 ---
 
@@ -116,7 +120,9 @@ npm run release
 ```
 .
 ├── src/                  # TypeScript 源代码目录，存放项目的核心业务代码
-│   └── index.ts          # 入口文件，程序的启动点
+│   │── api               # 接口代码
+│   │── modules           # 模块代码
+│   └── utils             # 工具代码
 ├── dist/                 # 编译输出目录，存放 TypeScript 编译后的 JavaScript 文件
 ├── docs/                 # 项目文档目录，包含功能说明、使用手册、设计文档等
 ├── release.js            # 发布脚本，自动化完成版本发布相关操作
