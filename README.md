@@ -47,7 +47,7 @@ td-web-cli
 - 多语言 JSON 转 Excel 工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/json2excel.md)
 - 多语言 Excel 转 JSON 及语言检测工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/excel2json.md)
 - 多语言 JSON 文件合并工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/jsonMerge.md)
-- 图片压缩工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/i18n/compressImage.md)
+- 图片压缩工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/image/compressImage.md)
 - 节假日查询与提醒工具。[详细功能说明请点击这里](https://github.com/qianyuzzf/td-web-cli/blob/master/docs/tools/getHolidayTime.md)
 
 ---
