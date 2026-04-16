@@ -10,6 +10,7 @@ import fs from 'fs';
 import { select, Separator } from '@inquirer/prompts';
 import { logger, loggerError } from './utils/index.js';
 import { i18n } from './modules/i18n/index.js';
+import { image } from './modules/image/index.js';
 import { tools } from './modules/tools/index.js';
 
 // 读取 package.json 中的版本号
@@ -51,6 +52,11 @@ async function runInteractiveMode() {
       description: '国际化相关功能',
     },
     {
+      name: '图片',
+      value: 'image',
+      description: '图片相关功能',
+    },
+    {
       name: '小工具',
       value: 'tools',
       description: '小工具相关功能',
@@ -83,6 +89,11 @@ async function runInteractiveMode() {
     case 'i18n':
       logger.info(`${selectedModule.name}模块开始执行`);
       await i18n(program);
+      logger.info(`${selectedModule.name}模块执行完成`);
+      break;
+    case 'image':
+      logger.info(`${selectedModule.name}模块开始执行`);
+      await image(program);
       logger.info(`${selectedModule.name}模块执行完成`);
       break;
     case 'tools':
