@@ -42,7 +42,6 @@
    srcDir/
      cn/
        translate.json
-       other.json
      en/
        translate.json
 
