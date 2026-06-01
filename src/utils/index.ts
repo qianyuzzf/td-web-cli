@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { select, Separator } from '@inquirer/prompts';
 import { getData, postData } from '../api/index.js';
 import api from '../api/interface.js';
 
@@ -441,4 +442,117 @@ export function trimQuotes(str: string): string {
     return str.slice(1, -1);
   }
   return str;
+}
+
+/**
+ * 读取JSON文件内容，返回对象，文件不存在返回空对象
+ * @param filePath JSON文件路径
+ * @returns 解析后的对象，出错或不存在返回空对象
+ */
+export function readJsonFile(filePath: string): Record<string, any> {
+  if (!fs.existsSync(filePath)) {
+    return {};
+  }
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(content);
+  } catch (error) {
+    logger.error(
+      `读取JSON文件失败: ${filePath}，错误: ${normalizeError(error).message}`
+    );
+    return {};
+  }
+}
+
+/**
+ * 写入JSON文件，格式化缩进2格
+ * @param filePath 写入文件路径
+ * @param data 写入的对象数据
+ */
+export function writeJsonFile(filePath: string, data: Record<string, any>) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+/**
+ * 合并两个JSON对象，检测重复key，重复时通过交互让用户选择保留哪个值
+ * @param baseObj 源JSON对象（被合并到此对象）
+ * @param mergeObj 待合并JSON对象
+ * @param langKey 当前语言标识，用于日志提示
+ * @returns 合并后的JSON对象
+ */
+export async function mergeJsonObjects(
+  baseObj: Record<string, any>,
+  mergeObj: Record<string, any>,
+  langKey: string
+): Promise<Record<string, any>> {
+  const entries = Object.entries(mergeObj);
+
+  for (const [key, val] of entries) {
+    if (key in baseObj) {
+      if (baseObj[key] === val) {
+        // 值相同，无需处理，继续下一个键
+        continue;
+      }
+
+      // 值不同，需要用户交互选择保留哪个值
+      logger.info(`发现冲突: 键【${key}】`, true);
+      const choice = await select({
+        message: `请选择要保留的值：`,
+        choices: [
+          { name: `源文件值: ${baseObj[key]}`, value: 'base' },
+          { name: `合并文件值: ${val}`, value: 'merge' },
+          new Separator(),
+        ],
+        default: 'base',
+        loop: true,
+      });
+
+      if (choice === 'merge') {
+        baseObj[key] = val;
+      }
+      // 如果选择保留base，则保持不变
+    } else {
+      // 新键，直接添加
+      baseObj[key] = val;
+    }
+  }
+
+  return baseObj;
+}
+
+/**
+ * 获取指定语言文件夹下的所有JSON文件名列表
+ * @param dirPath 语言文件夹路径
+ * @returns JSON文件名数组
+ */
+export function getJsonFilesInLangDir(dirPath: string): string[] {
+  if (!fs.existsSync(dirPath)) {
+    return [];
+  }
+
+  return fs.readdirSync(dirPath).filter((fileName) => {
+    const fullPath = path.join(dirPath, fileName);
+    return fs.statSync(fullPath).isFile() && fileName.endsWith('.json');
+  });
+}
+
+/**
+ * 通用的路径输入验证函数
+ * @param value 用户输入
+ * @returns 验证通过返回 true，否则返回错误信息字符串
+ */
+export function validatePathInput(value: string): true | string {
+  const cleaned = value.trim().replace(/^['"]|['"]$/g, '');
+  if (!cleaned) {
+    return '路径不能为空';
+  }
+  const normalized = normalizeGitBashPath(cleaned);
+  if (!fs.existsSync(normalized)) {
+    return '目录不存在，请输入有效路径';
+  }
+  if (!fs.statSync(normalized).isDirectory()) {
+    return '请输入一个目录路径';
+  }
+  return true;
 }

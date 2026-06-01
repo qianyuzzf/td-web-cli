@@ -11,6 +11,7 @@ import {
   loggerError,
   normalizeError,
   normalizeGitBashPath,
+  validatePathInput,
 } from '../../../utils/index.js';
 
 // AST 解析相关
@@ -338,20 +339,7 @@ export async function extractEntry(program: Command) {
   // 1. 输入项目根目录
   const answer = await input({
     message: '请输入项目根目录：',
-    validate: (value) => {
-      const cleaned = value.trim().replace(/^['"]|['"]$/g, '');
-      if (cleaned.length === 0) {
-        return '路径不能为空';
-      }
-      const normalizedPath = normalizeGitBashPath(cleaned);
-      if (!fs.existsSync(normalizedPath)) {
-        return '目录不存在，请输入有效路径';
-      }
-      if (!fs.statSync(normalizedPath).isDirectory()) {
-        return '请输入一个目录路径';
-      }
-      return true;
-    },
+    validate: validatePathInput,
   });
   const rootDir = normalizeGitBashPath(answer);
 

@@ -10,6 +10,7 @@ import {
   loggerError,
   normalizeError,
   normalizeGitBashPath,
+  validatePathInput,
 } from '../../../utils/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -69,20 +70,7 @@ export async function json2excel(program: Command) {
   // 交互式输入 JSON 根目录
   const answer = await input({
     message: '请输入存放多语言 JSON 的根目录：',
-    validate: (value) => {
-      const cleaned = value.trim().replace(/^['"]|['"]$/g, '');
-      if (cleaned.length === 0) {
-        return '路径不能为空';
-      }
-      const normalizedPath = normalizeGitBashPath(cleaned);
-      if (!fs.existsSync(normalizedPath)) {
-        return '目录不存在，请输入有效路径';
-      }
-      if (!fs.statSync(normalizedPath).isDirectory()) {
-        return '请输入一个目录路径';
-      }
-      return true;
-    },
+    validate: validatePathInput,
   });
 
   const rootDir = normalizeGitBashPath(answer);
@@ -111,9 +99,15 @@ export async function json2excel(program: Command) {
         const data = JSON.parse(content) as Record<string, string>;
         translations[langKey] = data;
         availableLangs.push(langKey);
-        logger.info(`已加载语言：${langKey}，词条数量：${Object.keys(data).length}`, true);
+        logger.info(
+          `已加载语言：${langKey}，词条数量：${Object.keys(data).length}`,
+          true
+        );
       } catch (err) {
-        logger.error(`读取 ${langKey} 的 translate.json 失败：${normalizeError(err).message}`, true);
+        logger.error(
+          `读取 ${langKey} 的 translate.json 失败：${normalizeError(err).message}`,
+          true
+        );
         process.exit(1);
       }
     }
@@ -126,7 +120,10 @@ export async function json2excel(program: Command) {
     // 默认语言
     const defaultLang = i18nConfig.defaultKey;
     if (!availableLangs.includes(defaultLang)) {
-      logger.warn(`默认语言 ${defaultLang} 不存在于已加载的语言中，将使用所有语言的 KEY 并集作为基准`, true);
+      logger.warn(
+        `默认语言 ${defaultLang} 不存在于已加载的语言中，将使用所有语言的 KEY 并集作为基准`,
+        true
+      );
     }
 
     // 收集所有 KEY 的并集（作为 Excel 第一列）
@@ -142,15 +139,18 @@ export async function json2excel(program: Command) {
 
     // 第一列名称：优先使用默认语言的第一个名称，否则用 defaultKey
     const defaultLangNames = i18nConfig.langs[defaultLang];
-    const firstColName = (defaultLangNames && defaultLangNames.length > 0)
-      ? defaultLangNames[0]
-      : defaultLang;
+    const firstColName =
+      defaultLangNames && defaultLangNames.length > 0
+        ? defaultLangNames[0]
+        : defaultLang;
     header.push(firstColName);
 
-    const nonDefaultLangs = availableLangs.filter((lang) => lang !== defaultLang);
+    const nonDefaultLangs = availableLangs.filter(
+      (lang) => lang !== defaultLang
+    );
     for (const lang of nonDefaultLangs) {
       const names = i18nConfig.langs[lang];
-      const colName = (names && names.length > 0) ? names[0] : lang;
+      const colName = names && names.length > 0 ? names[0] : lang;
       header.push(colName);
     }
 

@@ -5,6 +5,7 @@ import { excel2json } from './excel2json/index.js';
 import { json2excel } from './json2excel/index.js';
 import { jsonMerge } from './jsonMerge/index.js';
 import { extractEntry } from './extractEntry/index.js';
+import { jsonInsert } from './jsonInsert/index.js';
 
 /**
  * 国际化模块主入口
@@ -36,6 +37,11 @@ export async function i18n(program: Command) {
         name: 'JSON合并',
         value: 'jsonMerge',
         description: '合并多个JSON格式的词条信息文件',
+      },
+      {
+        name: 'JSON插入',
+        value: 'jsonInsert',
+        description: '插入词条信息到JSON文件中',
       },
     ];
 
@@ -80,6 +86,11 @@ export async function i18n(program: Command) {
       case 'jsonMerge':
         logger.info(`${selectedModule.name}功能开始执行`);
         await jsonMerge(program);
+        logger.info(`${selectedModule.name}功能执行完成`);
+        break;
+      case 'jsonInsert':
+        logger.info(`${selectedModule.name}功能开始执行`);
+        await jsonInsert(program);
         logger.info(`${selectedModule.name}功能执行完成`);
         break;
       default:

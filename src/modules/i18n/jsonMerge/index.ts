@@ -1,106 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
-import { input, select, Separator } from '@inquirer/prompts';
+import { input } from '@inquirer/prompts';
 import {
   logger,
   loggerError,
-  normalizeError,
   normalizeGitBashPath,
+  readJsonFile,
+  writeJsonFile,
+  mergeJsonObjects,
+  getJsonFilesInLangDir,
+  validatePathInput,
 } from '../../../utils/index.js';
-
-/**
- * 读取JSON文件内容，返回对象，文件不存在返回空对象
- * @param filePath JSON文件路径
- * @returns 解析后的对象，出错或不存在返回空对象
- */
-function readJsonFile(filePath: string): Record<string, any> {
-  if (!fs.existsSync(filePath)) {
-    return {};
-  }
-  try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(content);
-  } catch (error) {
-    logger.error(
-      `读取JSON文件失败: ${filePath}，错误: ${normalizeError(error).message}`
-    );
-    return {};
-  }
-}
-
-/**
- * 写入JSON文件，格式化缩进2格
- * @param filePath 写入文件路径
- * @param data 写入的对象数据
- */
-function writeJsonFile(filePath: string, data: Record<string, any>) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-/**
- * 合并两个JSON对象，检测重复key，重复时通过交互让用户选择保留哪个值
- * @param baseObj 源JSON对象（被合并到此对象）
- * @param mergeObj 待合并JSON对象
- * @param langKey 当前语言标识，用于日志提示
- * @returns 合并后的JSON对象
- */
-async function mergeJsonObjects(
-  baseObj: Record<string, any>,
-  mergeObj: Record<string, any>,
-  langKey: string
-): Promise<Record<string, any>> {
-  const entries = Object.entries(mergeObj);
-
-  for (const [key, val] of entries) {
-    if (key in baseObj) {
-      if (baseObj[key] === val) {
-        // 值相同，无需处理，继续下一个键
-        continue;
-      }
-
-      // 值不同，需要用户交互选择保留哪个值
-      logger.info(`发现冲突: 键【${key}】`, true);
-      const choice = await select({
-        message: `请选择要保留的值：`,
-        choices: [
-          { name: `源文件值: ${baseObj[key]}`, value: 'base' },
-          { name: `合并文件值: ${val}`, value: 'merge' },
-          new Separator(),
-        ],
-        default: 'base',
-        loop: true,
-      });
-
-      if (choice === 'merge') {
-        baseObj[key] = val;
-      }
-      // 如果选择保留base，则保持不变
-    } else {
-      // 新键，直接添加
-      baseObj[key] = val;
-    }
-  }
-
-  return baseObj;
-}
-
-/**
- * 获取指定语言文件夹下的所有JSON文件名列表
- * @param dirPath 语言文件夹路径
- * @returns JSON文件名数组
- */
-function getJsonFilesInLangDir(dirPath: string): string[] {
-  if (!fs.existsSync(dirPath)) {
-    return [];
-  }
-
-  return fs.readdirSync(dirPath).filter((fileName) => {
-    const fullPath = path.join(dirPath, fileName);
-    return fs.statSync(fullPath).isFile() && fileName.endsWith('.json');
-  });
-}
 
 /**
  * 主函数：合并两个目录下相同语言文件夹的JSON文件
@@ -112,40 +23,14 @@ export async function jsonMerge(program: Command) {
     const srcDir = await input({
       message:
         '请输入源JSON文件夹路径（含语言子文件夹，如cn/translate.json）：',
-      validate: (value) => {
-        const cleaned = value.trim().replace(/^['"]|['"]$/g, '');
-        if (cleaned.length === 0) {
-          return '路径不能为空';
-        }
-
-        const normalizedPath = normalizeGitBashPath(cleaned);
-
-        if (!fs.existsSync(normalizedPath)) {
-          return '文件不存在，请输入有效路径';
-        }
-
-        return true;
-      },
+      validate: validatePathInput,
     });
 
     // 交互输入待合并目录路径
     const mergeDir = await input({
       message:
         '请输入待合并JSON文件夹路径（含语言子文件夹，如cn/translate.json）：',
-      validate: (value) => {
-        const cleaned = value.trim().replace(/^['"]|['"]$/g, '');
-        if (cleaned.length === 0) {
-          return '路径不能为空';
-        }
-
-        const normalizedPath = normalizeGitBashPath(cleaned);
-
-        if (!fs.existsSync(normalizedPath)) {
-          return '文件不存在，请输入有效路径';
-        }
-
-        return true;
-      },
+      validate: validatePathInput,
     });
 
     const srcPath = normalizeGitBashPath(srcDir);
