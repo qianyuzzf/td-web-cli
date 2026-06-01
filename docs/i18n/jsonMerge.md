@@ -38,19 +38,19 @@
 
 1. 准备两个多语言 JSON 根目录，目录结构示例：
 
-   ```
-   srcDir/
-     cn/
-       translate.json
-     en/
-       translate.json
+```
+  srcDir/
+    cn/
+      translate.json
+    en/
+      translate.json
 
-   mergeDir/
-     cn/
-       translate.json
-     en/
-       translate.json
-   ```
+  mergeDir/
+    cn/
+      translate.json
+    en/
+      translate.json
+```
 
 2. 运行工具，依次输入源 JSON 文件夹路径和待合并 JSON 文件夹路径。
 
