@@ -15,24 +15,65 @@ import {
 /** 键冲突处理方式 */
 type ConflictStrategy = 'overwrite' | 'manual';
 
+/** 获取目录下的一级子文件夹名称 */
+function getSubDirectories(dirPath: string): string[] {
+  return fs.readdirSync(dirPath).filter((name) =>
+    fs.statSync(path.join(dirPath, name)).isDirectory()
+  );
+}
+
+/** 校验 JSON 文件路径输入 */
+function validateJsonFileInput(value: string): true | string {
+  const cleaned = value.trim().replace(/^['"]|['"]$/g, '');
+  if (!cleaned) return '路径不能为空';
+
+  const normalized = normalizeGitBashPath(cleaned);
+  if (!fs.existsSync(normalized)) return '文件不存在，请输入有效路径';
+  if (!fs.statSync(normalized).isFile()) return '请输入 JSON 文件路径';
+  if (!normalized.endsWith('.json')) return '请输入 .json 文件路径';
+
+  return true;
+}
+
 /**
- * 将指定 keys 从插入对象合并到源对象
- * @param baseObj     源 JSON 对象（会被原地修改）
- * @param insertObj   待插入的 JSON 对象
- * @param keys        需要插入的键数组
- * @param langKey     当前语言标识（用于日志）
- * @param strategy    冲突处理策略：直接覆盖或手动选择
- * @returns 返回修改后的源对象（与 baseObj 同一引用）
+ * 从 JSON 文件中提取待插入的 key 列表
+ * 支持对象（取顶层 key）或字符串数组两种格式
+ */
+function extractKeysFromJsonFile(filePath: string): string[] {
+  const content = fs.readFileSync(filePath, 'utf-8');
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error(`JSON 文件解析失败: ${filePath}`);
+  }
+
+  if (Array.isArray(parsed)) {
+    const keys = parsed
+      .filter((item): item is string => typeof item === 'string')
+      .map((key) => key.trim())
+      .filter((key) => key.length > 0);
+    return [...new Set(keys)];
+  }
+
+  if (parsed && typeof parsed === 'object') {
+    return Object.keys(parsed as Record<string, unknown>);
+  }
+
+  throw new Error('JSON 文件格式无效，需为对象或字符串数组');
+}
+
+/**
+ * 将指定 keys 从插入对象合并到被插入对象
  */
 async function insertKeysIntoObject(
   baseObj: Record<string, any>,
   insertObj: Record<string, any>,
   keys: string[],
-  langKey: string,
   strategy: ConflictStrategy
 ): Promise<Record<string, any>> {
   for (const key of keys) {
-    // 插入文件中不存在该键 → 跳过
     if (!(key in insertObj)) {
       logger.warn(`键 "${key}" 在插入文件中不存在，已跳过`, true);
       continue;
@@ -40,80 +81,69 @@ async function insertKeysIntoObject(
 
     const insertVal = insertObj[key];
 
-    // 源文件中不存在该键 → 直接新增
     if (!(key in baseObj)) {
       baseObj[key] = insertVal;
       logger.info(`新增键: ${key}`, true);
       continue;
     }
 
-    // 键已存在且值相同 → 跳过
     if (baseObj[key] === insertVal) {
       logger.info(`键 "${key}" 值相同，已跳过`, true);
       continue;
     }
 
-    // 键已存在且值不同 → 根据策略处理
     logger.info(`键 "${key}" 已存在且值不同`, true);
 
     if (strategy === 'overwrite') {
-      // 直接覆盖
+      baseObj[key] = insertVal;
+      logger.info(`已用插入值覆盖键 "${key}"`, true);
+      continue;
+    }
+
+    const choice = await select({
+      message: `请选择要保留的值：`,
+      choices: [
+        { name: `被插入文件值: ${baseObj[key]}`, value: 'base' },
+        { name: `插入文件值: ${insertVal}`, value: 'insert' },
+        new Separator(),
+      ],
+      default: 'base',
+      loop: true,
+    });
+
+    if (choice === 'insert') {
       baseObj[key] = insertVal;
       logger.info(`已用插入值覆盖键 "${key}"`, true);
     } else {
-      // 手动选择
-      const choice = await select({
-        message: `请选择要保留的值：`,
-        choices: [
-          { name: `源文件值: ${baseObj[key]}`, value: 'base' },
-          { name: `插入文件值: ${insertVal}`, value: 'insert' },
-          new Separator(), // 分割线，方便未来扩展更多功能
-        ],
-        default: 'base',
-        loop: true,
-      });
-
-      if (choice === 'insert') {
-        baseObj[key] = insertVal;
-        logger.info(`已用插入值覆盖键 "${key}"`, true);
-      } else {
-        logger.info(`保留源文件值，键 "${key}" 未更改`, true);
-      }
+      logger.info(`保留被插入文件值，键 "${key}" 未更改`, true);
     }
   }
+
   return baseObj;
 }
 
 /**
- * 主函数：从插入目录按指定 keys 批量插入到源目录
- * @param program Commander 实例（保留扩展可能）
+ * 主函数：从插入目录按指定 keys 批量插入到被插入目录
  */
 export async function jsonInsert(program: Command) {
   try {
-    // 获取源目录路径
     const srcDir = await input({
       message:
-        '请输入源 JSON 文件夹路径（含语言子文件夹，如 cn/translate.json）：',
+        '请输入被插入 JSON 文件夹路径（含语言子文件夹，如 cn/translate.json）：',
       validate: validatePathInput,
     });
 
-    // 获取待插入目录路径
     const insertDir = await input({
       message:
         '请输入待插入 JSON 文件夹路径（含语言子文件夹，如 cn/translate.json）：',
       validate: validatePathInput,
     });
 
-    // 获取需要插入的 keys
-    const keysInput = await input({
-      message: '请输入需要插入的 JSON key（多个 key 请用英文逗号分隔）：',
-      validate: (value) => {
-        if (!value.trim()) return '键不能为空';
-        return true;
-      },
+    const keysFileInput = await input({
+      message: '请输入 key 来源 JSON 文件路径（从中读取需要插入的 key）：',
+      validate: validateJsonFileInput,
     });
 
-    // 冲突处理策略选择
     const conflictStrategy = await select<ConflictStrategy>({
       message: '当目标键已存在且值不同时，请选择处理方式：',
       choices: [
@@ -125,38 +155,26 @@ export async function jsonInsert(program: Command) {
       loop: true,
     });
 
-    // 路径标准化
     const srcPath = normalizeGitBashPath(srcDir);
     const insertPath = normalizeGitBashPath(insertDir);
-
-    // 解析并清洗 keys
-    const keys = keysInput
-      .split(',')
-      .map((k) => k.trim())
-      .filter((k) => k.length > 0);
+    const keysFilePath = normalizeGitBashPath(keysFileInput);
+    const keys = extractKeysFromJsonFile(keysFilePath);
 
     if (keys.length === 0) {
-      logger.info('未输入有效 key，操作取消');
+      logger.info('key 来源文件中未找到有效 key，操作取消');
       return;
     }
 
-    logger.info(`源目录: ${srcPath}`);
+    logger.info(`被插入目录: ${srcPath}`);
     logger.info(`插入目录: ${insertPath}`);
+    logger.info(`key 来源文件: ${keysFilePath}`);
     logger.info(`待插入 key: ${keys.join(', ')}`);
     logger.info(
       `冲突处理策略: ${conflictStrategy === 'overwrite' ? '直接覆盖' : '手动选择'}`
     );
 
-    // 获取共同的顶层语言子文件夹
-    const srcLangDirs = fs
-      .readdirSync(srcPath)
-      .filter((f) => fs.statSync(path.join(srcPath, f)).isDirectory());
-    const insertLangDirs = fs
-      .readdirSync(insertPath)
-      .filter((f) => fs.statSync(path.join(insertPath, f)).isDirectory());
-
-    const commonLangDirs = srcLangDirs.filter((lang) =>
-      insertLangDirs.includes(lang)
+    const commonLangDirs = getSubDirectories(srcPath).filter((lang) =>
+      getSubDirectories(insertPath).includes(lang)
     );
 
     if (commonLangDirs.length === 0) {
@@ -169,19 +187,14 @@ export async function jsonInsert(program: Command) {
       true
     );
 
-    // 逐语言文件夹处理
     for (const langKey of commonLangDirs) {
       logger.info(`${'='.repeat(60)}`, true);
       logger.info(`处理语言: ${langKey}`, true);
 
       const srcLangPath = path.join(srcPath, langKey);
       const insertLangPath = path.join(insertPath, langKey);
-
-      const srcJsonFiles = getJsonFilesInLangDir(srcLangPath);
       const insertJsonFiles = getJsonFilesInLangDir(insertLangPath);
-
-      // 找出该语言下共同存在的 JSON 文件
-      const commonJsonFiles = srcJsonFiles.filter((file) =>
+      const commonJsonFiles = getJsonFilesInLangDir(srcLangPath).filter((file) =>
         insertJsonFiles.includes(file)
       );
 
@@ -195,38 +208,24 @@ export async function jsonInsert(program: Command) {
         true
       );
 
-      // 逐文件插入
       for (const jsonFile of commonJsonFiles) {
         logger.info(`处理文件: ${jsonFile}`, true);
 
         const srcFile = path.join(srcLangPath, jsonFile);
         const insertFile = path.join(insertLangPath, jsonFile);
-
-        if (!fs.existsSync(srcFile) || !fs.existsSync(insertFile)) {
-          logger.warn(`文件缺失，跳过: ${jsonFile}`, true);
-          continue;
-        }
-
-        // 读取 JSON
         const srcJson = readJsonFile(srcFile);
         const insertJson = readJsonFile(insertFile);
 
-        const beforeCount = Object.keys(srcJson).length;
-        logger.info(`源文件原有键数: ${beforeCount}`, true);
+        logger.info(`被插入文件原有键数: ${Object.keys(srcJson).length}`, true);
 
-        // 执行插入
         const updated = await insertKeysIntoObject(
           srcJson,
           insertJson,
           keys,
-          langKey,
           conflictStrategy
         );
 
-        const afterCount = Object.keys(updated).length;
-        logger.info(`插入后键数: ${afterCount}`, true);
-
-        // 写回源文件
+        logger.info(`插入后键数: ${Object.keys(updated).length}`, true);
         writeJsonFile(srcFile, updated);
         logger.info(`文件 ${jsonFile} 已更新`, true);
       }
@@ -236,7 +235,7 @@ export async function jsonInsert(program: Command) {
 
     logger.info(`${'='.repeat(60)}`, true);
     logger.info(`所有插入操作完成!`, true);
-    logger.info(`源目录已更新: ${srcPath}`, true);
+    logger.info(`被插入目录已更新: ${srcPath}`, true);
   } catch (error: unknown) {
     loggerError(error, logger);
     console.error('程序执行时发生异常，已记录日志，程序已退出');
