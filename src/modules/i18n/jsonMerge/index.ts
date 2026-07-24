@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
-import { input } from '@inquirer/prompts';
+import { input, select, Separator } from '@inquirer/prompts';
 import {
   logger,
   loggerError,
@@ -11,6 +11,8 @@ import {
   mergeJsonObjects,
   getJsonFilesInLangDir,
   validatePathInput,
+  type JsonMergeConflictMode,
+  type JsonMergeConflictPriority,
 } from '../../../utils/index.js';
 
 /**
@@ -33,11 +35,52 @@ export async function jsonMerge(program: Command) {
       validate: validatePathInput,
     });
 
+    const conflictMode = await select<JsonMergeConflictMode>({
+      message: '存在相同 key 且值不同时，请选择处理方式：',
+      choices: [
+        {
+          name: '自动处理（所有冲突 key 使用同一优先规则）',
+          value: 'automatic',
+        },
+        { name: '手动处理（逐个冲突 key 选择）', value: 'manual' },
+        new Separator(),
+      ],
+      default: 'manual',
+      loop: true,
+    });
+
+    let automaticPriority: JsonMergeConflictPriority = 'base';
+    if (conflictMode === 'automatic') {
+      automaticPriority = await select<JsonMergeConflictPriority>({
+        message: '请选择自动处理冲突时以哪个文件为主：',
+        choices: [
+          {
+            name: '被合并文件为主（保留被合并文件中的值）',
+            value: 'base',
+          },
+          {
+            name: '合并文件为主（使用合并文件中的值）',
+            value: 'merge',
+          },
+          new Separator(),
+        ],
+        default: 'base',
+        loop: true,
+      });
+    }
+
     const srcPath = normalizeGitBashPath(srcDir);
     const mergePath = normalizeGitBashPath(mergeDir);
 
     logger.info(`源目录: ${srcPath}`);
     logger.info(`合并目录: ${mergePath}`);
+    logger.info(
+      `冲突处理方式: ${
+        conflictMode === 'manual'
+          ? '手动处理'
+          : `自动处理（${automaticPriority === 'base' ? '被合并文件为主' : '合并文件为主'}）`
+      }`
+    );
 
     // 获取两个目录下的一级语言子文件夹列表
     const srcLangDirs = fs.readdirSync(srcPath).filter((f) => {
@@ -124,7 +167,10 @@ export async function jsonMerge(program: Command) {
           true
         );
 
-        const merged = await mergeJsonObjects(srcJson, mergeJson, langKey);
+        const merged = await mergeJsonObjects(srcJson, mergeJson, langKey, {
+          conflictMode,
+          automaticPriority,
+        });
 
         const finalKeyCount = Object.keys(merged).length;
         logger.info(`合并后键数: ${finalKeyCount}`, true);

@@ -474,18 +474,29 @@ export function writeJsonFile(filePath: string, data: Record<string, any>) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
+export type JsonMergeConflictMode = 'automatic' | 'manual';
+export type JsonMergeConflictPriority = 'base' | 'merge';
+
+export interface JsonMergeOptions {
+  conflictMode?: JsonMergeConflictMode;
+  automaticPriority?: JsonMergeConflictPriority;
+}
+
 /**
- * 合并两个JSON对象，检测重复key，重复时通过交互让用户选择保留哪个值
+ * 合并两个JSON对象，检测重复key，并根据冲突配置决定保留哪个值
  * @param baseObj 源JSON对象（被合并到此对象）
  * @param mergeObj 待合并JSON对象
  * @param langKey 当前语言标识，用于日志提示
+ * @param options 冲突处理方式，默认逐个手动选择
  * @returns 合并后的JSON对象
  */
 export async function mergeJsonObjects(
   baseObj: Record<string, any>,
   mergeObj: Record<string, any>,
-  langKey: string
+  langKey: string,
+  options: JsonMergeOptions = {}
 ): Promise<Record<string, any>> {
+  const { conflictMode = 'manual', automaticPriority = 'base' } = options;
   const entries = Object.entries(mergeObj);
 
   for (const [key, val] of entries) {
@@ -495,12 +506,20 @@ export async function mergeJsonObjects(
         continue;
       }
 
-      // 值不同，需要用户交互选择保留哪个值
       logger.info(`发现冲突: 键【${key}】`, true);
+
+      if (conflictMode === 'automatic') {
+        if (automaticPriority === 'merge') {
+          baseObj[key] = val;
+        }
+        continue;
+      }
+
+      // 手动模式下，逐个冲突选择保留哪个值
       const choice = await select({
         message: `请选择要保留的值：`,
         choices: [
-          { name: `源文件值: ${baseObj[key]}`, value: 'base' },
+          { name: `被合并文件值: ${baseObj[key]}`, value: 'base' },
           { name: `合并文件值: ${val}`, value: 'merge' },
           new Separator(),
         ],
