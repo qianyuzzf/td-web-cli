@@ -7,7 +7,8 @@
 ## 主要功能
 
 1. **JSON 文件读取与写入**
-   - 安全读取指定路径的 JSON 文件，格式错误或文件不存在时返回空对象。
+   - 读取并校验指定路径的 JSON 对象；文件缺失、格式错误或根节点不是对象时立即终止。
+   - 解析失败的文件不会被空对象覆盖。
    - 将合并后的 JSON 对象格式化写入文件，自动创建目录。
 
 2. **键冲突处理**
@@ -68,7 +69,7 @@
 ## 代码结构简述
 
 - **readJsonFile(filePath: string): Record<string, any>**  
-  读取 JSON 文件内容，异常时返回空对象。
+  读取并校验 JSON 对象，文件或内容无效时抛出异常。
 
 - **writeJsonFile(filePath: string, data: Record<string, any>)**  
   格式化写入 JSON 文件，自动创建目录。

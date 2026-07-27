@@ -10,7 +10,7 @@
    - 支持 `.js`、`.jsx`、`.ts`、`.tsx`、`.vue`、`.html` 和 `.htm` 文件格式。
 2. **中文词条提取**
    - 通过 AST 解析 JavaScript/TypeScript 代码，提取字符串字面量和模板字符串中的中文。
-   - 解析 Vue 单文件组件，提取 script 和 template 中的中文文本及属性值。
+   - 解析 Vue 单文件组件，同时扫描 `<script>`、`<script setup>` 和 `<template>` 中的中文文本及属性值。
    - 解析 HTML 文件，提取文本节点及属性中的中文内容，忽略注释。
    - 支持提取动态绑定表达式中的字符串字面量。
 
@@ -54,7 +54,7 @@
   使用 Babel 解析 JS/TS/JSX 代码，提取包含中文的字符串。
 
 - **extractFromVue(content: string): Set<string>**  
-  解析 Vue 单文件组件，提取 script 和 template 部分的中文。
+  解析 Vue 单文件组件，分别提取普通 script、script setup 和 template 部分的中文。
 
 - **extractFromHTML(html: string): Set<string>**  
   解析 HTML 文件，提取文本和属性中的中文。

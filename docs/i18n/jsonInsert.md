@@ -7,7 +7,8 @@
 ## 主要功能
 
 1. **按需键插入**
-   - 用户指定一组 JSON 键（多个键用英文逗号分隔）。
+   - 用户提供一个 key 来源 JSON 文件；文件可为对象（读取顶层 key）或字符串数组。
+   - 字符串数组中的空值会被过滤，重复 key 会自动去重。
    - 工具自动扫描源目录与插入目录，在相同的语言子文件夹（如 `cn`、`en`）和相同的 JSON 文件内，仅插入指定的键。
 
 2. **冲突策略可配**
@@ -20,7 +21,7 @@
    - 自动识别两个目录下共同存在的语言子文件夹和 JSON 文件，确保操作范围准确。
 
 4. **安全读写**
-   - JSON 文件解析失败或不存在时返回空对象，避免程序中断。
+   - JSON 文件不存在、无法解析或根节点不是对象时立即报错并终止，当前文件不会被空对象覆盖。
    - 写入时自动创建父目录，格式化缩进输出，保持文件可读性。
 
 5. **详细日志与反馈**
@@ -29,7 +30,7 @@
    - 对缺失的键、跳过的情况进行警告提示。
 
 6. **异常捕获与安全退出**
-   - 全局异常捕获，错误信息记录日志后退出，防止数据部分写入。
+   - 全局异常捕获，错误信息记录日志后退出，防止发生错误的文件继续写入。
 
 ---
 
@@ -55,7 +56,7 @@
 
 - **源 JSON 文件夹路径**：最终修改的目标目录。
 - **待插入 JSON 文件夹路径**：提供待插入键值对的目录。
-- **需要插入的 JSON key**：例如 `greeting, farewell, new_key`。
+- **key 来源 JSON 文件路径**：内容可为 `{ "greeting": true, "farewell": true }` 或 `["greeting", "farewell"]`。
 - **冲突处理策略**：
   - `直接覆盖（始终使用插入文件值）`
   - `手动选择（针对每个冲突键提示）`
@@ -76,7 +77,7 @@
 ## 代码结构简述
 
 - **readJsonFile(filePath: string): Record<string, any>**  
-  安全读取 JSON 文件，异常时返回空对象。
+  读取并校验 JSON 对象；文件缺失、解析失败或根节点类型错误时抛出异常。
 
 - **writeJsonFile(filePath: string, data: Record<string, any>)**  
   格式化写入 JSON 文件，自动创建目录结构。
@@ -84,8 +85,7 @@
 - **getJsonFilesInLangDir(dirPath: string): string[]**  
   返回指定目录下所有 `.json` 文件名称列表。
 
-- **insertKeysIntoObject(baseObj, insertObj, keys, langKey, strategy)**  
-  核心插入逻辑：根据冲突策略将指定键从插入对象合并到源对象。
+- **insertKeysIntoObject(baseObj, insertObj, keys, strategy)**：核心插入逻辑，根据冲突策略将指定键从插入对象合并到源对象。
 
 - **jsonInsert(program: Command)**  
   主流程函数：交互式输入参数，匹配语言文件夹与 JSON 文件，调用插入逻辑完成批量操作。
