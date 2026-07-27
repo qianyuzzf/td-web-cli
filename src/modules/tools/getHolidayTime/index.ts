@@ -1,6 +1,6 @@
 import { getData } from '../../../api/index.js';
 import api from '../../../api/interface.js';
-import { logger, loggerError } from '../../../utils/index.js';
+import { logger, loggerError, normalizeError } from '../../../utils/index.js';
 
 interface HolidayDate {
   date: string; // 日期字符串，格式 "YYYY-MM-DD"
@@ -28,11 +28,13 @@ interface HolidaySummary {
  * @param count 需要返回的节假日数量，默认3
  * @returns 最近count个节假日的汇总信息数组
  */
-function getNearestHolidays(
+export function getNearestHolidays(
   data: HolidayData,
-  count: number = 3
+  count: number = 3,
+  now: Date = new Date()
 ): HolidaySummary[] {
-  const today = new Date();
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
 
   // 过滤出所有节假日和调休日
   const holidays = data.dates.filter(
@@ -152,10 +154,33 @@ export async function getHolidayTime() {
     logger.info('开始获取节假日数据...', true);
     const year = new Date().getFullYear();
     const url = api.UNPKG_HOLIDAY_CALENDAR + `/${year}.json`;
-    const data: HolidayData = await getData<HolidayData>(url);
+    let data: HolidayData = await getData<HolidayData>(url);
     logger.info('节假日数据请求成功，开始计算最近节假日...', true);
 
-    const nearest = getNearestHolidays(data, 3);
+    let nearest = getNearestHolidays(data, 3);
+
+    // 当前年份不足三个未来假期时，补充下一年数据，避免年末无结果。
+    if (nearest.length < 3) {
+      const nextYear = year + 1;
+      const nextYearUrl = api.UNPKG_HOLIDAY_CALENDAR + `/${nextYear}.json`;
+      try {
+        logger.info(
+          `当前年份未来假期不足，开始获取 ${nextYear} 年数据...`,
+          true
+        );
+        const nextYearData = await getData<HolidayData>(nextYearUrl);
+        data = {
+          ...data,
+          dates: [...data.dates, ...nextYearData.dates],
+        };
+        nearest = getNearestHolidays(data, 3);
+      } catch (error: unknown) {
+        logger.warn(
+          `获取 ${nextYear} 年节假日数据失败，将展示当前可用结果：${normalizeError(error).message}`,
+          true
+        );
+      }
+    }
 
     console.log('\x1b[36m%s\x1b[0m', '=== 最近三个节假日信息 ==='); // 青色标题
     nearest.forEach((holiday, index) => {

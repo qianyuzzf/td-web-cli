@@ -17,9 +17,9 @@ type ConflictStrategy = 'overwrite' | 'manual';
 
 /** 获取目录下的一级子文件夹名称 */
 function getSubDirectories(dirPath: string): string[] {
-  return fs.readdirSync(dirPath).filter((name) =>
-    fs.statSync(path.join(dirPath, name)).isDirectory()
-  );
+  return fs
+    .readdirSync(dirPath)
+    .filter((name) => fs.statSync(path.join(dirPath, name)).isDirectory());
 }
 
 /** 校验 JSON 文件路径输入 */
@@ -194,8 +194,8 @@ export async function jsonInsert(program: Command) {
       const srcLangPath = path.join(srcPath, langKey);
       const insertLangPath = path.join(insertPath, langKey);
       const insertJsonFiles = getJsonFilesInLangDir(insertLangPath);
-      const commonJsonFiles = getJsonFilesInLangDir(srcLangPath).filter((file) =>
-        insertJsonFiles.includes(file)
+      const commonJsonFiles = getJsonFilesInLangDir(srcLangPath).filter(
+        (file) => insertJsonFiles.includes(file)
       );
 
       if (commonJsonFiles.length === 0) {

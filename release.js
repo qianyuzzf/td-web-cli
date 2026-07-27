@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { readFileSync, writeFileSync } from "fs";
-import { execSync } from "child_process";
-import { input } from "@inquirer/prompts";
+import { readFileSync } from 'fs';
+import { execSync } from 'child_process';
+import { input } from '@inquirer/prompts';
 
 function exitWithError(msg) {
   console.error(`\x1b[31merror：${msg}\x1b[0m`);
@@ -13,9 +13,13 @@ function logStep(msg) {
   console.log(`\x1b[36m${msg}\x1b[0m`);
 }
 
+function run(command) {
+  execSync(command, { stdio: 'inherit' });
+}
+
 // 版本号自增，默认增加 patch 版本，如 1.2.3 -> 1.2.4
 function incrementVersion(version) {
-  const parts = version.split(".");
+  const parts = version.split('.');
   if (parts.length !== 3) {
     return null;
   }
@@ -24,13 +28,13 @@ function incrementVersion(version) {
     return null;
   }
   parts[2] = (patch + 1).toString();
-  return parts.join(".");
+  return parts.join('.');
 }
 
 // 比较版本号大小，返回 -1 表示 v1 < v2，0 表示相等，1 表示 v1 > v2
 function compareVersions(v1, v2) {
-  const p1 = v1.split(".").map(Number);
-  const p2 = v2.split(".").map(Number);
+  const p1 = v1.split('.').map(Number);
+  const p2 = v2.split('.').map(Number);
   for (let i = 0; i < 3; i++) {
     if (p1[i] > p2[i]) {
       return 1;
@@ -44,12 +48,19 @@ function compareVersions(v1, v2) {
 
 async function main() {
   try {
-    logStep("读取 package.json 中的版本号...");
-    const pkgRaw = readFileSync("package.json", "utf-8");
+    const gitStatus = execSync('git status --porcelain', {
+      encoding: 'utf-8',
+    }).trim();
+    if (gitStatus) {
+      exitWithError('工作区存在未提交修改，请提交或暂存后再发布');
+    }
+
+    logStep('读取 package.json 中的版本号...');
+    const pkgRaw = readFileSync('package.json', 'utf-8');
     const pkg = JSON.parse(pkgRaw);
     const currentVersion = pkg.version;
     if (!currentVersion) {
-      exitWithError("package.json 中没有找到 version 字段");
+      exitWithError('package.json 中没有找到 version 字段');
     }
 
     const defaultVersion = incrementVersion(currentVersion);
@@ -62,18 +73,18 @@ async function main() {
 
     // 交互输入新版本号，支持默认值、格式校验和版本号大小校验
     const newVersion = await input({
-      message: "请输入新的版本号：",
+      message: '请输入新的版本号：',
       default: defaultVersion,
       required: true,
       pattern: /^\d+\.\d+\.\d+$/,
-      patternError: "版本号格式应为 x.y.z",
-      prefill: "editable",
+      patternError: '版本号格式应为 x.y.z',
+      prefill: 'editable',
       validate(value) {
         if (!/^\d+\.\d+\.\d+$/.test(value)) {
-          return "版本号格式应为 x.y.z";
+          return '版本号格式应为 x.y.z';
         }
-        if (compareVersions(value, currentVersion) === -1) {
-          return `新版本号不能低于当前版本号 ${currentVersion}`;
+        if (compareVersions(value, currentVersion) <= 0) {
+          return `新版本号必须高于当前版本号 ${currentVersion}`;
         }
         return true;
       },
@@ -81,36 +92,31 @@ async function main() {
 
     logStep(`设置新版本号为：${newVersion}`);
 
-    // 更新 package.json 中的版本号
-    pkg.version = newVersion;
-
-    // 判断原文件末尾是否有换行符，写回时保持一致
-    const endsWithNewline = pkgRaw.endsWith("\n");
-    const newPkgContent = JSON.stringify(pkg, null, 2) + (endsWithNewline ? "\n" : "");
-    writeFileSync("package.json", newPkgContent, "utf-8");
-    logStep("package.json 版本号已更新");
-
-    // 安装依赖
-    logStep("开始执行 npm install ...");
-    execSync("npm install", { stdio: "inherit" });
+    // 同步更新 package.json 和 package-lock.json 中的版本号
+    logStep('开始更新版本号...');
+    run(`npm version ${newVersion} --no-git-tag-version`);
 
     // 执行构建脚本
-    logStep("开始执行 npm run build ...");
-    execSync("npm run build", { stdio: "inherit" });
+    logStep('开始执行 npm run build ...');
+    run('npm run build');
 
-    // 发布到 npm
-    logStep("开始执行 npm publish ...");
-    execSync("npm publish", { stdio: "inherit" });
+    // 在提交前验证实际发布包内容
+    logStep('开始检查 npm 发布包内容...');
+    run('npm pack --dry-run');
 
-    // 提交代码到 git 仓库并推送到远程
-    logStep("开始提交代码到 git 仓库...");
-    execSync("git add .", { stdio: "inherit" });
-    execSync(`git commit -m "${newVersion}版本发布"`, { stdio: "inherit" });
+    // 只提交版本文件，避免把无关本地内容带入发布提交
+    logStep('开始提交版本文件...');
+    run('git add package.json package-lock.json');
+    run(`git commit -m "${newVersion}版本发布"`);
 
-    logStep("开始推送代码到远程仓库...");
-    execSync("git push", { stdio: "inherit" });
+    // 先确保对应源码已推送，再公开 npm 包
+    logStep('开始推送代码到远程仓库...');
+    run('git push');
 
-    logStep("发布流程完成！");
+    logStep('开始执行 npm publish ...');
+    run('npm publish');
+
+    logStep('发布流程完成！');
   } catch (err) {
     exitWithError(err.message || err);
   }

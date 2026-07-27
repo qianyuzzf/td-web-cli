@@ -38,6 +38,11 @@ function getOutputPath(inputPath: string): string {
   return path.join(dir, `${baseName}_${suffix}${ext}`);
 }
 
+/** 创建保留动画帧和多页内容的 Sharp 处理管线。 */
+export function createImageProcessor(input: string | Buffer) {
+  return sharp(input, { animated: true });
+}
+
 /**
  * 图片压缩主功能
  * - 交互式输入图片路径
@@ -120,7 +125,8 @@ export async function compressImage(program: Command) {
     );
 
     // 读取图片元数据，获取格式信息
-    const image = sharp(imagePath);
+    // animated=true 确保 GIF、WebP 和多页 TIFF 不会被静默截成第一帧。
+    const image = createImageProcessor(imagePath);
     const metadata = await image.metadata();
     const format = metadata.format;
 
@@ -313,16 +319,38 @@ export async function compressImage(program: Command) {
         break;
 
       case 'gif':
-        // sharp 对 GIF 处理有限，保持原样
-        logger.warn('GIF 格式仅支持原样输出，不进行额外压缩', true);
+        if (compressType === 'lossless') {
+          pipeline = pipeline.gif({
+            effort: 10,
+            interFrameMaxError: 0,
+            interPaletteMaxError: 0,
+          });
+        } else if (compressType === 'visually_lossless') {
+          pipeline = pipeline.gif({
+            effort: 10,
+            interFrameMaxError: 2,
+            interPaletteMaxError: 3,
+          });
+        } else if (compressType === 'lossy') {
+          pipeline = pipeline.gif({
+            effort: 10,
+            colours: 128,
+            interFrameMaxError: 8,
+          });
+        } else {
+          pipeline = pipeline.gif({
+            effort: 10,
+            colours: 64,
+            interFrameMaxError: 16,
+          });
+        }
         break;
 
       default:
         throw new Error(`暂不支持的格式：${format}`);
     }
 
-    // 移除所有元数据以进一步减小体积
-    pipeline = pipeline.withMetadata({});
+    // Sharp 默认不保留 EXIF、XMP、IPTC 等输入元数据。
 
     const outputPath = getOutputPath(imagePath);
 

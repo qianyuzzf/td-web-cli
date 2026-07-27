@@ -445,22 +445,29 @@ export function trimQuotes(str: string): string {
 }
 
 /**
- * 读取JSON文件内容，返回对象，文件不存在返回空对象
+ * 读取JSON文件内容并返回对象
  * @param filePath JSON文件路径
- * @returns 解析后的对象，出错或不存在返回空对象
+ * @returns 解析后的对象
+ * @throws 文件不存在、JSON 无效或根节点不是对象时抛出异常
  */
 export function readJsonFile(filePath: string): Record<string, any> {
   if (!fs.existsSync(filePath)) {
-    return {};
+    throw new Error(`JSON文件不存在: ${filePath}`);
   }
+
   try {
     const content = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(content);
+    const parsed: unknown = JSON.parse(content);
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('JSON根节点必须是对象');
+    }
+
+    return parsed as Record<string, any>;
   } catch (error) {
-    logger.error(
+    throw new Error(
       `读取JSON文件失败: ${filePath}，错误: ${normalizeError(error).message}`
     );
-    return {};
   }
 }
 

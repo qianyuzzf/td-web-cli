@@ -337,6 +337,10 @@ export async function excel2json(program: Command) {
       const row = rows[i];
       let keyCell = row[defaultColNum];
       if (keyCell === undefined || keyCell === null || keyCell === '') {
+        // 保留与原始 Excel 数据行一致的占位，避免检测结果在空行后错位
+        Object.keys(langKeysMap).forEach((langKey) => {
+          langKeysMap[langKey].push('');
+        });
         continue;
       }
 

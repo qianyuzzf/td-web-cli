@@ -111,14 +111,16 @@ function extractFromJS(code: string): Set<string> {
 /**
  * 使用 @vue/compiler-sfc 解析 Vue 单文件组件
  */
-function extractFromVue(content: string): Set<string> {
+export function extractFromVue(content: string): Set<string> {
   const strings = new Set<string>();
   const { descriptor } = vueParse(content);
 
   // 处理 script 部分（注释已被 Babel 解析忽略）
-  if (descriptor.script || descriptor.scriptSetup) {
-    const scriptContent =
-      descriptor.script?.content || descriptor.scriptSetup?.content || '';
+  const scriptBlocks = [descriptor.script, descriptor.scriptSetup].filter(
+    (block) => block !== null
+  );
+  for (const scriptBlock of scriptBlocks) {
+    const scriptContent = scriptBlock.content;
     if (scriptContent) {
       try {
         const scriptStrings = extractFromJS(scriptContent);
